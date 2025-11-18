@@ -13,6 +13,7 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
+#include "art.h"
 
 // Estrutura para o estado do jogo
 typedef struct {
@@ -89,6 +90,12 @@ int apresentarMenu(const char *titulo, const char *opcoes[], int numOpcoes) {
     return escolha;
 }
 
+void exibirAsciiArt(const char* art) {
+    clear();
+    printw("%s", art);
+    refresh();
+}
+
 // ========== FUNCOES AUXILIARES ==========
 
 void limparTela() {
@@ -149,6 +156,7 @@ int main() {
 // ========== MENU INICIAL ==========
 
 void menu(GameState *estado) {
+    exibirAsciiArt(TITULO);
     const char *opcoes[] = {
         "Iniciar Jogo",
         "Sobre o Jogo",
@@ -234,6 +242,8 @@ void escolhaRota(GameState *estado) {
 // ========================================
 
 void rotaFloresta(GameState *estado) {
+    exibirAsciiArt(FLORESTA);
+    pausar();
     limparTela();
     printw("\n=== FLORESTA ===\n\n");
     printw("Voce entra na floresta densa.\n");
@@ -617,6 +627,8 @@ void eventoNinfaFloresta(GameState *estado) {
 // ========================================
 
 void rotaPantano(GameState *estado) {
+    exibirAsciiArt(PANTANO);
+    pausar();
     limparTela();
     printw("\n=== PANTANO ===\n\n");
     printw("Voce entra no pantano lodoso.\n");
@@ -1019,6 +1031,8 @@ void eventoCobraPantano(GameState *estado) {
 // ========================================
 
 void rotaCaverna(GameState *estado) {
+    exibirAsciiArt(CAVERNA);
+    pausar();
     limparTela();
     printw("\n=== CAVERNA ===\n\n");
     printw("Voce entra na caverna escura.\n");
@@ -1444,6 +1458,8 @@ void eventoDrakeAnciao(GameState *estado) {
 // ========================================
 
 void castelo(GameState *estado) {
+    exibirAsciiArt(CASTELO);
+    pausar();
     limparTela();
     printw("\n=====================================\n");
     printw("         CHEGADA AO CASTELO\n");
