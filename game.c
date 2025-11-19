@@ -2,7 +2,7 @@
 =====================================
   A BUSCA DO AMULETO SAGRADO
   RPG em Linguagem C
-  
+
   Sistema de Pontuacao:
   - Cada rota tem uma virtude
   - Escolhas certas dao pontos
@@ -10,194 +10,230 @@
 =====================================
 */
 
-#include <stdio.h>
+#include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
+#include "art.h"
 
-// ========== VARIAVEIS GLOBAIS ==========
+// Estrutura para o estado do jogo
+typedef struct {
+    int pontosCompaixao;
+    int pontosAstucia;
+    int pontosSabedoria;
+    int temMithril;
+    int temEscamaDragao;
+    int dragaoFilhoteSalvo;
+    int dragaoFilhoteMorto;
+    char rotaEscolhida[20];
+} GameState;
 
-// Pontuacao por virtude
-int pontosCompaixao = 0;    // Floresta
-int pontosAstúcia = 0;      // Pantano (escrevi sem acento pra nao dar erro)
-int pontosSabedoria = 0;    // Caverna
+int apresentarMenu(const char *titulo, const char *opcoes[], int numOpcoes) {
+    WINDOW *menu_win;
+    int highlight = 1;
+    int escolha = 0;
+    int c;
+    int startx, starty, width, height;
 
-// Controle de itens importantes (0 = nao tem, 1 = tem)
-int temMithril = 0;
-int temEscamaDragao = 0;
-int dragaoFilhoteSalvo = 0;
-int dragaoFilhoteMorto = 0;
+    height = numOpcoes + 4;
+    width = 80;
+    starty = (LINES - height) / 2;
+    startx = (COLS - width) / 2;
 
-// Controle da rota escolhida
-char rotaEscolhida[20];
+    menu_win = newwin(height, width, starty, startx);
+    keypad(menu_win, TRUE);
+    box(menu_win, 0, 0);
+    mvwprintw(menu_win, 1, (width - strlen(titulo)) / 2, "%s", titulo);
+    wrefresh(menu_win);
+
+    while (1) {
+        for (int i = 0; i < numOpcoes; i++) {
+            if (highlight == i + 1) {
+                wattron(menu_win, A_REVERSE);
+                mvwprintw(menu_win, i + 2, 2, "%s", opcoes[i]);
+                wattroff(menu_win, A_REVERSE);
+            } else {
+                mvwprintw(menu_win, i + 2, 2, "%s", opcoes[i]);
+            }
+        }
+        wrefresh(menu_win);
+
+        c = wgetch(menu_win);
+        switch (c) {
+            case KEY_UP:
+                if (highlight == 1)
+                    highlight = numOpcoes;
+                else
+                    --highlight;
+                break;
+            case KEY_DOWN:
+                if (highlight == numOpcoes)
+                    highlight = 1;
+                else
+                    ++highlight;
+                break;
+            case 10: // Enter
+                escolha = highlight;
+                break;
+            default:
+                break;
+        }
+        if (escolha != 0)
+            break;
+    }
+
+    wclear(menu_win);
+    wrefresh(menu_win);
+    delwin(menu_win);
+    clear();
+    refresh();
+
+    return escolha;
+}
+
+void exibirAsciiArt(const char* art) {
+    clear();
+    printw("%s", art);
+    refresh();
+}
 
 // ========== FUNCOES AUXILIARES ==========
 
-// Limpa a tela (funciona em Windows e Linux)
 void limparTela() {
-    #ifdef _WIN32
-        system("cls");
-    #else
-        system("clear");
-    #endif
+    clear();
 }
 
-// Pausa o jogo ate o jogador apertar ENTER
 void pausar() {
-    printf("\n\nPressione ENTER para continuar...");
-    while(getchar() != '\n');  // Limpa o buffer
-    getchar();                 // Espera o ENTER
+    printw("\n\nPressione qualquer tecla para continuar...");
+    getch();
 }
 
-// Mostra os pontos atuais (para debug, pode comentar depois)
-void mostrarPontos() {
-    printf("\n[DEBUG - Pontos Atuais]");
-    printf("\nCompaixao: %d | Astucia: %d | Sabedoria: %d\n", 
-           pontosCompaixao, pontosAstúcia, pontosSabedoria);
+void mostrarPontos(GameState *estado) {
+    printw("\n[DEBUG - Pontos Atuais]");
+    printw("\nCompaixao: %d | Astucia: %d | Sabedoria: %d\n",
+           estado->pontosCompaixao, estado->pontosAstucia, estado->pontosSabedoria);
 }
 
 // ========== DECLARACAO DAS FUNCOES ==========
-// (Declarar antes para o compilador saber que existem)
-
-void menu();
-void introducao();
-void escolhaRota();
-
-// Floresta
-void rotaFloresta();
-void eventoGoblinFada();
-void eventoElfaGlacify();
-void eventoNinfaFloresta();
-
-// Pantano
-void rotaPantano();
-void eventoCelaBruxa();
-void eventoLagartoFulzard();
-void eventoCobraPantano();
-
-// Caverna
-void rotaCaverna();
-void eventoDragaoFilhote();
-void eventoAnaoEgnar();
-void eventoDrakeAnciao();
-
-// Castelo
-void castelo();
-void eventoGargulaCharadas();
-void eventoArmadurasDancarinas();
-void eventoMimicoDiario();
-void confrontoFinalAnimata();
-
-// Finais
-void calcularRanking();
+void mostrarPontos(GameState *estado);
+void menu(GameState *estado);
+void introducao(GameState *estado);
+void escolhaRota(GameState *estado);
+void rotaFloresta(GameState *estado);
+void eventoGoblinFada(GameState *estado);
+void eventoElfaGlacify(GameState *estado);
+void eventoNinfaFloresta(GameState *estado);
+void rotaPantano(GameState *estado);
+void eventoCelaBruxa(GameState *estado);
+void eventoLagartoFulzard(GameState *estado);
+void eventoCobraPantano(GameState *estado);
+void rotaCaverna(GameState *estado);
+void eventoDragaoFilhote(GameState *estado);
+void eventoAnaoEgnar(GameState *estado);
+void eventoDrakeAnciao(GameState *estado);
+void castelo(GameState *estado);
+void eventoGargulaCharadas(GameState *estado);
+void eventoArmadurasDancarinas(GameState *estado);
+void eventoMimicoDiario(GameState *estado);
+void confrontoFinalAnimata(GameState *estado);
+void calcularRanking(GameState *estado);
 
 // ========== FUNCAO PRINCIPAL ==========
 
 int main() {
-    menu();
+    GameState estado = {0};
+
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+
+    menu(&estado);
+
+    endwin();
     return 0;
 }
 
 // ========== MENU INICIAL ==========
 
-void menu() {
-    int escolha;
-    
-    limparTela();
-    printf("=====================================\n");
-    printf("  A BUSCA DO AMULETO SAGRADO\n");
-    printf("=====================================\n\n");
-    
-    printf("1 - Iniciar Jogo\n");
-    printf("2 - Sobre o Jogo\n");
-    printf("3 - Sair\n\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha);
-    
+void menu(GameState *estado) {
+    exibirAsciiArt(TITULO);
+    const char *opcoes[] = {
+        "Iniciar Jogo",
+        "Sobre o Jogo",
+        "Sair"
+    };
+    int escolha = apresentarMenu("A BUSCA DO AMULETO SAGRADO", opcoes, 3);
+
     if (escolha == 1) {
-        introducao();
+        introducao(estado);
     } else if (escolha == 2) {
         limparTela();
-        printf("\n=== SOBRE O JOGO ===\n\n");
-        printf("Um RPG de escolhas onde suas decisoes importam.\n");
-        printf("Tres caminhos, tres virtudes, multiplos finais.\n");
-        printf("Descubra a verdade sobre os herois do passado.\n\n");
+        printw("\n=== SOBRE O JOGO ===\n\n");
+        printw("Um RPG de escolhas onde suas decisoes importam.\n");
+        printw("Tres caminhos, tres virtudes, multiplos finais.\n");
+        printw("Descubra a verdade sobre os herois do passado.\n\n");
         pausar();
-        menu();
+        menu(estado);
     } else {
-        printf("\nObrigado por jogar!\n");
+        endwin();
         exit(0);
     }
 }
 
 // ========== INTRODUCAO ==========
 
-void introducao() {
+void introducao(GameState *estado) {
     limparTela();
-    printf("\n=== INTRODUCAO ===\n\n");
-    
-    printf("Ao acordar, voce sai da sua casa e avista um senhor idoso.\n");
-    printf("Ele se chama Kenshi, e parece preocupado.\n\n");
+    printw("\n=== INTRODUCAO ===\n\n");
+
+    printw("Ao acordar, voce sai da sua casa e avista um senhor idoso.\n");
+    printw("Ele se chama Kenshi, e parece preocupado.\n\n");
     pausar();
-    
-    printf("Kenshi: \"Preciso da sua ajuda, jovem aventureiro.\"\n");
-    printf("\"Ha um tempo atras, havia uma maga renomada chamada Animata.\"\n");
-    printf("\"Ela fazia parte de um grupo de herois lendarios.\"\n\n");
+
+    printw("Kenshi: \"Preciso da sua ajuda, jovem aventureiro.\"\n");
+    printw("\"Ha um tempo atras, havia uma maga renomada chamada Animata.\"\n");
+    printw("\"Ela fazia parte de um grupo de herois lendarios.\"\n\n");
     pausar();
-    
-    printf("\"Eles protegiam nosso reino... ate que algo terrivel aconteceu.\"\n");
-    printf("\"O lider deles, Damian, morreu em batalha.\"\n");
-    printf("\"Animata enlouqueceu de dor e roubou o amuleto sagrado.\"\n");
-    printf("\"Agora ela se trancou no castelo.\"\n\n");
+
+    printw("\"Eles protegiam nosso reino... ate que algo terrivel aconteceu.\"\n");
+    printw("\"O lider deles, Damian, morreu em batalha.\"\n");
+    printw("\"Animata enlouqueceu de dor e roubou o amuleto sagrado.\"\n");
+    printw("\"Agora ela se trancou no castelo.\"\n\n");
     pausar();
-    
-    printf("\"Preciso que voce recupere o amuleto e... talvez... salve ela.\"\n\n");
-    printf("Kenshi te entrega uma mochila com suprimentos e uma espada.\n");
-    printf("Ele limpa uma lagrima: \"Se cuide... Confio em voce.\"\n\n");
+
+    printw("\"Preciso que voce recupere o amuleto e... talvez... salve ela.\"\n\n");
+    printw("Kenshi te entrega uma mochila com suprimentos e uma espada.\n");
+    printw("Ele limpa uma lagrima: \"Se cuide... Confio em voce.\"\n\n");
     pausar();
-    
-    escolhaRota();
+
+    escolhaRota(estado);
 }
 
 // ========== ESCOLHA DA ROTA ==========
 
-void escolhaRota() {
-    int escolha;
-    
-    limparTela();
-    printf("\n=== ESCOLHA SEU CAMINHO ===\n\n");
-    
-    printf("Kenshi: \"Ha tres caminhos para o castelo.\"\n\n");
-    
-    printf("1 - FLORESTA\n");
-    printf("   'O caminho da vida e da harmonia.'\n");
-    printf("   'Aqui, a COMPAIXAO e testada.'\n\n");
-    
-    printf("2 - PANTANO\n");
-    printf("   'O caminho dos desafios e armadilhas.'\n");
-    printf("   'Aqui, a ASTUCIA e testada.'\n\n");
-    
-    printf("3 - CAVERNA\n");
-    printf("   'O caminho do conhecimento e verdade.'\n");
-    printf("   'Aqui, a SABEDORIA e testada.'\n\n");
-    
-    printf("Sua escolha: ");
-    scanf("%d", &escolha);
-    
+void escolhaRota(GameState *estado) {
+    const char *opcoes[] = {
+        "FLORESTA - O caminho da vida e da harmonia. Aqui, a COMPAIXAO e testada.",
+        "PANTANO - O caminho dos desafios e armadilhas. Aqui, a ASTUCIA e testada.",
+        "CAVERNA - O caminho do conhecimento e verdade. Aqui, a SABEDORIA e testada."
+    };
+    int escolha = apresentarMenu("ESCOLHA SEU CAMINHO", opcoes, 3);
+
     // Salva a rota escolhida
     if (escolha == 1) {
-        strcpy(rotaEscolhida, "Floresta");
-        rotaFloresta();
+        strcpy(estado->rotaEscolhida, "Floresta");
+        rotaFloresta(estado);
     } else if (escolha == 2) {
-        strcpy(rotaEscolhida, "Pantano");
-        rotaPantano();
+        strcpy(estado->rotaEscolhida, "Pantano");
+        rotaPantano(estado);
     } else if (escolha == 3) {
-        strcpy(rotaEscolhida, "Caverna");
-        rotaCaverna();
+        strcpy(estado->rotaEscolhida, "Caverna");
+        rotaCaverna(estado);
     } else {
-        printf("\nEscolha invalida! Indo pela Floresta...\n");
+        printw("\nEscolha invalida! Indo pela Floresta...\n");
         pausar();
-        strcpy(rotaEscolhida, "Floresta");
-        rotaFloresta();
+        strcpy(estado->rotaEscolhida, "Floresta");
+        rotaFloresta(estado);
     }
 }
 
@@ -205,381 +241,390 @@ void escolhaRota() {
 //          ROTA 1: FLORESTA
 // ========================================
 
-void rotaFloresta() {
-    limparTela();
-    printf("\n=== FLORESTA ===\n\n");
-    printf("Voce entra na floresta densa.\n");
-    printf("A luz do sol atravessa as folhas criando um ambiente magico.\n");
-    printf("Voce sente paz... mas tambem vigilancia.\n\n");
+void rotaFloresta(GameState *estado) {
+    exibirAsciiArt(FLORESTA);
     pausar();
-    
+    limparTela();
+    printw("\n=== FLORESTA ===\n\n");
+    printw("Voce entra na floresta densa.\n");
+    printw("A luz do sol atravessa as folhas criando um ambiente magico.\n");
+    printw("Voce sente paz... mas tambem vigilancia.\n\n");
+    pausar();
+
     // Tres eventos da floresta
-    eventoGoblinFada();
-    eventoElfaGlacify();
-    eventoNinfaFloresta();
-    
+    eventoGoblinFada(estado);
+    eventoElfaGlacify(estado);
+    eventoNinfaFloresta(estado);
+
     // Apos completar a floresta, vai para o castelo
-    castelo();
+    castelo(estado);
 }
 
 // ---------- EVENTO 1: GOBLIN E FADA ----------
 
-void eventoGoblinFada() {
+void eventoGoblinFada(GameState *estado) {
     int escolha1, escolha2;
-    
-    limparTela();
-    printf("\n=== EVENTO 1: ENCONTRO NA FLORESTA ===\n\n");
-    
-    printf("Voce avista um brilho estranho no arbusto.\n");
-    printf("Ao se aproximar, ouve grunidos.\n");
-    printf("Voce se esconde atras de uma arvore e observa:\n\n");
-    printf("Um GOBLIN esta tentando comer uma FADA!\n");
-    printf("A fada grita pedindo ajuda!\n\n");
+
+    exibirAsciiArt(GOBLIN_FADA);
     pausar();
-    
-    printf("O que voce faz?\n");
-    printf("1 - Atacar o goblin (violencia direta)\n");
-    printf("2 - Procurar algo ao redor (preparacao)\n");
-    printf("3 - Interagir com o goblin (comunicacao)\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha1);
-    
+
+    limparTela();
+    printw("\n=== EVENTO 1: ENCONTRO NA FLORESTA ===\n\n");
+
+    printw("Voce avista um brilho estranho no arbusto.\n");
+    printw("Ao se aproximar, ouve grunidos.\n");
+    printw("Voce se esconde atras de uma arvore e observa:\n\n");
+    printw("Um GOBLIN esta tentando comer uma FADA!\n");
+    printw("A fada grita pedindo ajuda!\n\n");
+    pausar();
+
+    const char *opcoes1[] = {
+        "Atacar o goblin (violencia direta)",
+        "Procurar algo ao redor (preparacao)",
+        "Interagir com o goblin (comunicacao)"
+    };
+    escolha1 = apresentarMenu("O que voce faz?", opcoes1, 3);
+
     // ===== ESCOLHA 1: ATACAR =====
     if (escolha1 == 1) {
         limparTela();
-        printf("\nVoce pega sua espada e avanca!\n");
-        printf("O goblin se assusta e solta a fada!\n");
-        printf("Voce o persegue e...\n\n");
-        
-        printf("O que voce faz?\n");
-        printf("1 - Deixar ele fugir (misericordia)\n");
-        printf("2 - Correr atras e atacar (justica)\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+        printw("\nVoce pega sua espada e avanca!\n");
+        printw("O goblin se assusta e solta a fada!\n");
+        printw("Voce o persegue e...\n\n");
+
+        const char *opcoes2[] = {
+            "Deixar ele fugir (misericordia)",
+            "Correr atras e atacar (justica)"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 2);
+
         if (escolha2 == 1) {
-            printf("\nVoce deixa o goblin fugir assustado.\n");
-            printf("A fada agradece: 'Obrigada por nao matar ele!'\n");
-            printf("Ela danca ao seu redor e voce se sente revigorado.\n");
-            pontosCompaixao += 2;  // +2 pontos por misericordia
+            printw("\nVoce deixa o goblin fugir assustado.\n");
+            printw("A fada agradece: 'Obrigada por nao matar ele!'\n");
+            printw("Ela danca ao seu redor e voce se sente revigorado.\n");
+            estado->pontosCompaixao += 2;  // +2 pontos por misericordia
         } else {
-            printf("\nVoce persegue e derrota o goblin.\n");
-            printf("A fada agradece, mas parece triste: 'Ele era so um bebe...'\n");
-            pontosCompaixao += 0;  // 0 pontos - violencia desnecessaria
+            printw("\nVoce persegue e derrota o goblin.\n");
+            printw("A fada agradece, mas parece triste: 'Ele era so um bebe...'\n");
+            estado->pontosCompaixao += 0;  // 0 pontos - violencia desnecessaria
         }
-        
+
     // ===== ESCOLHA 2: PROCURAR AO REDOR =====
     } else if (escolha1 == 2) {
         limparTela();
-        printf("\nVoce procura ao redor cuidadosamente...\n");
-        printf("Voce encontra:\n\n");
-        
-        printf("1 - Pedras no chao\n");
-        printf("2 - Cristal brilhante\n");
-        printf("3 - Frutas vermelhas\n");
-        printf("O que voce pega? ");
-        scanf("%d", &escolha2);
-        
+        printw("\nVoce procura ao redor cuidadosamente...\n");
+        printw("Voce encontra:\n\n");
+
+        const char *opcoes2[] = {
+            "Pedras no chao",
+            "Cristal brilhante",
+            "Frutas vermelhas"
+        };
+        escolha2 = apresentarMenu("O que voce pega?", opcoes2, 3);
+
         if (escolha2 == 1) {
             // PEDRAS
-            printf("\nVoce pega uma pedra e arremessa no goblin!\n");
-            printf("Acerta! Ele solta a fada e foge.\n");
-            printf("A fada agradece e te abencoa.\n");
-            pontosCompaixao += 1;  // +1 ponto - resolveu sem matar
-            
+            printw("\nVoce pega uma pedra e arremessa no goblin!\n");
+            printw("Acerta! Ele solta a fada e foge.\n");
+            printw("A fada agradece e te abencoa.\n");
+            estado->pontosCompaixao += 1;  // +1 ponto - resolveu sem matar
+
         } else if (escolha2 == 2) {
             // CRISTAL
-            printf("\nVoce pega o cristal brilhante e o mostra!\n");
-            printf("O goblin esquece a fada e corre atras do cristal!\n");
-            printf("Ele pega o cristal e sai pulando feliz.\n");
-            printf("A fada ri: 'Goblins adoram coisas brilhantes!'\n");
-            printf("Ela danca em volta de voce e te abencoa.\n");
-            pontosCompaixao += 3;  // +3 pontos - solucao criativa e pacifica
-            
+            printw("\nVoce pega o cristal brilhante e o mostra!\n");
+            printw("O goblin esquece a fada e corre atras do cristal!\n");
+            printw("Ele pega o cristal e sai pulando feliz.\n");
+            printw("A fada ri: 'Goblins adoram coisas brilhantes!'\n");
+            printw("Ela danca em volta de voce e te abencoa.\n");
+            estado->pontosCompaixao += 3;  // +3 pontos - solucao criativa e pacifica
+
         } else {
             // FRUTAS
-            printf("\nVoce pega as frutas e joga para o goblin!\n");
-            printf("Ele pega as frutas e comeca a comer feliz.\n");
-            printf("Ele solta a fada e te agradece!\n");
-            printf("A fada: 'Ele so estava com fome! Obrigada por entender!'\n");
-            printf("Ela te abencoa com po magico.\n");
-            pontosCompaixao += 3;  // +3 pontos - empatia maxima
+            printw("\nVoce pega as frutas e joga para o goblin!\n");
+            printw("Ele pega as frutas e comeca a comer feliz.\n");
+            printw("Ele solta a fada e te agradece!\n");
+            printw("A fada: 'Ele so estava com fome! Obrigada por entender!'\n");
+            printw("Ela te abencoa com po magico.\n");
+            estado->pontosCompaixao += 3;  // +3 pontos - empatia maxima
         }
-        
+
     // ===== ESCOLHA 3: INTERAGIR =====
     } else if (escolha1 == 3) {
         limparTela();
-        printf("\nVoce se aproxima com as maos levantadas.\n");
-        printf("O goblin te ve e fica na defensiva, segurando a fada.\n\n");
-        
-        printf("O que voce faz?\n");
-        printf("1 - Gritar com ele (intimidacao)\n");
-        printf("2 - Fazer mimica (comunicacao)\n");
-        printf("3 - Dar comida da mochila (empatia)\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+        printw("\nVoce se aproxima com as maos levantadas.\n");
+        printw("O goblin te ve e fica na defensiva, segurando a fada.\n\n");
+
+        const char *opcoes2[] = {
+            "Gritar com ele (intimidacao)",
+            "Fazer mimica (comunicacao)",
+            "Dar comida da mochila (empatia)"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
             // GRITAR
-            printf("\nVoce grita alto!\n");
-            printf("O goblin se assusta muito e comeca a correr!\n");
-            printf("Ele deixa a fada cair no caminho.\n");
-            printf("A fada agradece, um pouco abalada pelo susto.\n");
-            pontosCompaixao += 1;  // +1 ponto - funcionou mas foi agressivo
-            
+            printw("\nVoce grita alto!\n");
+            printw("O goblin se assusta muito e comeca a correr!\n");
+            printw("Ele deixa a fada cair no caminho.\n");
+            printw("A fada agradece, um pouco abalada pelo susto.\n");
+            estado->pontosCompaixao += 1;  // +1 ponto - funcionou mas foi agressivo
+
         } else if (escolha2 == 2) {
             // MIMICA
-            printf("\nVoce comeca a fazer mimica!\n");
-            printf("Voce aponta para a fada, depois para o ceu.\n");
-            printf("Voce faz cara de triste, depois de feliz.\n");
-            printf("O goblin te olha confuso...\n");
-            printf("De repente ele entende e ri muito!\n");
-            printf("Ele solta a fada, ainda rindo, e vai embora feliz.\n");
-            printf("A fada: 'Voce e muito engracado! E gentil!'\n");
-            pontosCompaixao += 3;  // +3 pontos - criatividade e empatia
-            
+            printw("\nVoce comeca a fazer mimica!\n");
+            printw("Voce aponta para a fada, depois para o ceu.\n");
+            printw("Voce faz cara de triste, depois de feliz.\n");
+            printw("O goblin te olha confuso...\n");
+            printw("De repente ele entende e ri muito!\n");
+            printw("Ele solta a fada, ainda rindo, e vai embora feliz.\n");
+            printw("A fada: 'Voce e muito engracado! E gentil!'\n");
+            estado->pontosCompaixao += 3;  // +3 pontos - criatividade e empatia
+
         } else {
             // DAR COMIDA
-            printf("\nVoce pega carne seca da mochila e oferece.\n");
-            printf("O goblin cheira... e seus olhos brilham!\n");
-            printf("Ele solta a fada e pega a comida.\n");
-            printf("Ele come feliz e te segue um pouco, agradecido.\n");
-            printf("A fada: 'Ele so tinha fome! Voce tem um bom coracao!'\n");
-            pontosCompaixao += 4;  // +4 pontos - maxima empatia (sacrificou comida)
+            printw("\nVoce pega carne seca da mochila e oferece.\n");
+            printw("O goblin cheira... e seus olhos brilham!\n");
+            printw("Ele solta a fada e pega a comida.\n");
+            printw("Ele come feliz e te segue um pouco, agradecido.\n");
+            printw("A fada: 'Ele so tinha fome! Voce tem um bom coracao!'\n");
+            estado->pontosCompaixao += 4;  // +4 pontos - maxima empatia (sacrificou comida)
         }
     }
-    
+
     pausar();
-    printf("\n[COMPAIXAO: +%d pontos neste evento]\n", pontosCompaixao);
+    printw("\n[COMPAIXAO: +%d pontos neste evento]\n", estado->pontosCompaixao);
     pausar();
 }
 
 // ---------- EVENTO 2: ELFA GLACIFY ----------
 
-void eventoElfaGlacify() {
+void eventoElfaGlacify(GameState *estado) {
     int escolha1, escolha2;
-    
-    limparTela();
-    printf("\n=== EVENTO 2: RIO E CACHOEIRA ===\n\n");
-    
-    printf("Voce continua pela floresta ate encontrar um rio cristalino.\n");
-    printf("Seguindo o rio, voce chega a uma bela cachoeira.\n\n");
-    printf("Do lado direito, uma ELFA NEGRA medita em posicao de lotus.\n");
-    printf("Do lado esquerdo, uma ESPADA LONGA esta cravada no chao.\n");
-    printf("A cachoeira cai forte no centro.\n\n");
+
+    exibirAsciiArt(ELFA_CACHOEIRA);
     pausar();
-    
-    printf("O que voce faz?\n");
-    printf("1 - Pegar a espada (acao impulsiva)\n");
-    printf("2 - Conversar com a elfa (respeito)\n");
-    printf("3 - Entrar na cachoeira (purificacao)\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha1);
-    
+
+    limparTela();
+    printw("\n=== EVENTO 2: RIO E CACHOEIRA ===\n\n");
+
+    printw("Voce continua pela floresta ate encontrar um rio cristalino.\n");
+    printw("Seguindo o rio, voce chega a uma bela cachoeira.\n\n");
+    printw("Do lado direito, uma ELFA NEGRA medita em posicao de lotus.\n");
+    printw("Do lado esquerdo, uma ESPADA LONGA esta cravada no chao.\n");
+    printw("A cachoeira cai forte no centro.\n\n");
+    pausar();
+
+    const char *opcoes1[] = {
+        "Pegar a espada (acao impulsiva)",
+        "Conversar com a elfa (respeito)",
+        "Entrar na cachoeira (purificacao)"
+    };
+    escolha1 = apresentarMenu("O que voce faz?", opcoes1, 3);
+
     // ===== ESCOLHA 1: PEGAR ESPADA =====
     if (escolha1 == 1) {
         limparTela();
-        printf("\nVoce se aproxima da espada.\n");
-        printf("E linda, antiga, coberta de vinhas.\n");
-        printf("Voce puxa... e ela sai facilmente!\n");
-        printf("Um brilho azul emana dela!\n");
-        printf("Voce se sente como um heroi escolhido!\n\n");
-        printf("De repente... tudo ao seu redor CONGELA!\n");
-        printf("Voce esta preso em gelo!\n\n");
+        printw("\nVoce se aproxima da espada.\n");
+        printw("E linda, antiga, coberta de vinhas.\n");
+        printw("Voce puxa... e ela sai facilmente!\n");
+        printw("Um brilho azul emana dela!\n");
+        printw("Voce se sente como um heroi escolhido!\n\n");
+        printw("De repente... tudo ao seu redor CONGELA!\n");
+        printw("Voce esta preso em gelo!\n\n");
         pausar();
-        
-        printf("A elfa abre os olhos e se aproxima.\n");
-        printf("Ela pega a espada de suas maos congeladas.\n");
-        printf("Com um gesto, o gelo derrete.\n\n");
-        printf("Elfa: 'Por que pegou sem pedir?'\n\n");
-        
-        printf("O que voce responde?\n");
-        printf("1 - Pedir desculpas humildemente\n");
-        printf("2 - Se justificar\n");
-        printf("3 - Ficar em silencio\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        printw("A elfa abre os olhos e se aproxima.\n");
+        printw("Ela pega a espada de suas maos congeladas.\n");
+        printw("Com um gesto, o gelo derrete.\n\n");
+        printw("Elfa: 'Por que pegou sem pedir?'\n\n");
+
+        const char *opcoes2[] = {
+            "Pedir desculpas humildemente",
+            "Se justificar",
+            "Ficar em silencio"
+        };
+        escolha2 = apresentarMenu("O que voce responde?", opcoes2, 3);
+
         if (escolha2 == 1) {
             // DESCULPAS
-            printf("\nVoce: 'Me desculpe, agi por impulso. Foi errado.'\n");
-            printf("Elfa sorri: 'Poucos admitem erros. Isso e compaixao por si mesmo.'\n");
-            printf("'Aceitar falhas e o primeiro passo para crescer.'\n");
-            pontosCompaixao += 2;  // +2 por humildade
-            
+            printw("\nVoce: 'Me desculpe, agi por impulso. Foi errado.'\n");
+            printw("Elfa sorri: 'Poucos admitem erros. Isso e compaixao por si mesmo.'\n");
+            printw("'Aceitar falhas e o primeiro passo para crescer.'\n");
+            estado->pontosCompaixao += 2;  // +2 por humildade
+
         } else if (escolha2 == 2) {
             // JUSTIFICAR
-            printf("\nVoce: 'Pensei que era uma espada perdida...'\n");
-            printf("Elfa balanca a cabeca: 'Justificar erros nao os apaga.'\n");
-            printf("'Mas ao menos voce tenta entender. Isso e algo.'\n");
-            pontosCompaixao += 1;  // +1 por tentar
-            
+            printw("\nVoce: 'Pensei que era uma espada perdida...'\n");
+            printw("Elfa balanca a cabeca: 'Justificar erros nao os apaga.'\n");
+            printw("'Mas ao menos voce tenta entender. Isso e algo.'\n");
+            estado->pontosCompaixao += 1;  // +1 por tentar
+
         } else {
             // SILENCIO
-            printf("\nVoce fica em silencio, refletindo sobre seu erro.\n");
-            printf("Elfa: 'O silencio tambem e resposta.'\n");
-            printf("'Voce reflete. Isso e sabio.'\n");
-            pontosCompaixao += 2;  // +2 por reflexao
+            printw("\nVoce fica em silencio, refletindo sobre seu erro.\n");
+            printw("Elfa: 'O silencio tambem e resposta.'\n");
+            printw("'Voce reflete. Isso e sabio.'\n");
+            estado->pontosCompaixao += 2;  // +2 por reflexao
         }
-        
-        printf("\nElfa: 'Meu nome e Glacify. Ja fui guerreira.'\n");
-        printf("'Conheci um paladino chamado Damian...'\n");
-        printf("'Ele me ensinou que errar nao e o fim.'\n");
-        printf("'Espero que sua jornada termine melhor que a dele.'\n");
-        
+
+        printw("\nElfa: 'Meu nome e Glacify. Ja fui guerreira.'\n");
+        printw("'Conheci um paladino chamado Damian...'\n");
+        printw("'Ele me ensinou que errar nao e o fim.'\n");
+        printw("'Espero que sua jornada termine melhor que a dele.'\n");
+
     // ===== ESCOLHA 2: CONVERSAR =====
     } else if (escolha1 == 2) {
         limparTela();
-        printf("\nVoce se aproxima respeitosamente da elfa.\n");
-        printf("Ela abre os olhos lentamente.\n");
-        printf("O vento balanca seus cabelos prateados.\n");
-        printf("Ela te cumprimenta com um aceno.\n\n");
-        printf("Elfa: 'Ola, viajante. O que te traz aqui?'\n");
-        printf("Voce conta sobre sua missao.\n\n");
+        printw("\nVoce se aproxima respeitosamente da elfa.\n");
+        printw("Ela abre os olhos lentamente.\n");
+        printw("O vento balanca seus cabelos prateados.\n");
+        printw("Ela te cumprimenta com um aceno.\n\n");
+        printw("Elfa: 'Ola, viajante. O que te traz aqui?'\n");
+        printw("Voce conta sobre sua missao.\n\n");
         pausar();
-        
-        printf("Ela suspira: 'Animata... conheci ela.'\n");
-        printf("'Eramos parte do mesmo grupo.'\n");
-        printf("'Eu sou Glacify.'\n\n");
-        
-        printf("O que voce pergunta?\n");
-        printf("1 - Treinar com ela\n");
-        printf("2 - Perguntar sobre Damian\n");
-        printf("3 - Perguntar sobre a espada\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        printw("Ela suspira: 'Animata... conheci ela.'\n");
+        printw("'Eramos parte do mesmo grupo.'\n");
+        printw("'Eu sou Glacify.'\n\n");
+
+        const char *opcoes2[] = {
+            "Treinar com ela",
+            "Perguntar sobre Damian",
+            "Perguntar sobre a espada"
+        };
+        escolha2 = apresentarMenu("O que voce pergunta?", opcoes2, 3);
+
         if (escolha2 == 1) {
             // TREINAR
-            printf("\nGlacify sorri: 'Faz tempo que nao luto!'\n");
-            printf("Voces treinam a tarde toda.\n");
-            printf("Ela e incrivelmente rapida e precisa.\n");
-            printf("Voce aprende muito com ela.\n");
-            printf("Glacify: 'Obrigada. Voce me lembrou porque eu lutava.'\n");
-            printf("'Para proteger, nao para destruir.'\n");
-            pontosCompaixao += 3;  // +3 por conexao e aprendizado
-            
+            printw("\nGlacify sorri: 'Faz tempo que nao luto!'\n");
+            printw("Voces treinam a tarde toda.\n");
+            printw("Ela e incrivelmente rapida e precisa.\n");
+            printw("Voce aprende muito com ela.\n");
+            printw("Glacify: 'Obrigada. Voce me lembrou porque eu lutava.'\n");
+            printw("'Para proteger, nao para destruir.'\n");
+            estado->pontosCompaixao += 3;  // +3 por conexao e aprendizado
+
         } else if (escolha2 == 2) {
             // DAMIAN
-            printf("\nGlacify: 'Damian... ele era nosso lider.'\n");
-            printf("'Sempre sabia o que dizer.'\n");
-            printf("'Ele me ensinou a ter confianca em mim mesma.'\n");
-            printf("'Eu tinha medo de errar... de machucar alguem.'\n");
-            printf("'Ele disse: Voce ja falha ao nao tentar.'\n");
-            printf("'Levei isso comigo.'\n");
-            pontosCompaixao += 2;  // +2 por empatia e curiosidade
-            
+            printw("\nGlacify: 'Damian... ele era nosso lider.'\n");
+            printw("'Sempre sabia o que dizer.'\n");
+            printw("'Ele me ensinou a ter confianca em mim mesma.'\n");
+            printw("'Eu tinha medo de errar... de machucar alguem.'\n");
+            printw("'Ele disse: Voce ja falha ao nao tentar.'\n");
+            printw("'Levei isso comigo.'\n");
+            estado->pontosCompaixao += 2;  // +2 por empatia e curiosidade
+
         } else {
             // ESPADA
-            printf("\nGlacify olha para a espada: 'Era de Damian.'\n");
-            printf("'Deixei aqui como lembranca... e como teste.'\n");
-            printf("'Quem pega sem perguntar, nao e digno.'\n");
-            printf("'Voce perguntou. Isso diz muito.'\n");
-            pontosCompaixao += 2;  // +2 por respeito
+            printw("\nGlacify olha para a espada: 'Era de Damian.'\n");
+            printw("'Deixei aqui como lembranca... e como teste.'\n");
+            printw("'Quem pega sem perguntar, nao e digno.'\n");
+            printw("'Voce perguntou. Isso diz muito.'\n");
+            estado->pontosCompaixao += 2;  // +2 por respeito
         }
-        
-        printf("\nGlacify: 'Va com cuidado. Animata sofre... mas e perigosa.'\n");
-        
+
+        printw("\nGlacify: 'Va com cuidado. Animata sofre... mas e perigosa.'\n");
+
     // ===== ESCOLHA 3: CACHOEIRA =====
     } else {
         limparTela();
-        printf("\nVoce decide entrar na cachoeira.\n");
-        printf("Tira sua armadura e espada.\n");
-        printf("A agua e gelada, mas revigorante.\n");
-        printf("Voce se sente limpo... internamente.\n\n");
+        printw("\nVoce decide entrar na cachoeira.\n");
+        printw("Tira sua armadura e espada.\n");
+        printw("A agua e gelada, mas revigorante.\n");
+        printw("Voce se sente limpo... internamente.\n\n");
         pausar();
-        
-        printf("Ao sair, a elfa esta te observando.\n");
-        printf("Ela sorri: 'Poucos escolhem a purificacao.'\n");
-        printf("'A maioria escolhe o poder.' (aponta para a espada)\n");
-        printf("'Meu nome e Glacify.'\n\n");
-        
-        printf("O que voce faz?\n");
-        printf("1 - Agradecer a cachoeira (gratidao)\n");
-        printf("2 - Perguntar se ela cuida do lugar\n");
-        printf("3 - Meditar com ela\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        printw("Ao sair, a elfa esta te observando.\n");
+        printw("Ela sorri: 'Poucos escolhem a purificacao.'\n");
+        printw("'A maioria escolhe o poder.' (aponta para a espada)\n");
+        printw("'Meu nome e Glacify.'\n\n");
+
+        const char *opcoes2[] = {
+            "Agradecer a cachoeira (gratidao)",
+            "Perguntar se ela cuida do lugar",
+            "Meditar com ela"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nVoce agradece em voz alta a cachoeira.\n");
-            printf("Glacify: 'Gratidao e uma virtude rara.'\n");
-            printf("'Que a floresta te proteja.'\n");
-            pontosCompaixao += 2;
-            
+            printw("\nVoce agradece em voz alta a cachoeira.\n");
+            printw("Glacify: 'Gratidao e uma virtude rara.'\n");
+            printw("'Que a floresta te proteja.'\n");
+            estado->pontosCompaixao += 2;
+
         } else if (escolha2 == 2) {
-            printf("\nGlacify: 'Sim, cuido. E minha penitencia.'\n");
-            printf("'Falhei em proteger alguem importante.'\n");
-            printf("'Agora protejo este lugar sagrado.'\n");
-            pontosCompaixao += 2;
-            
+            printw("\nGlacify: 'Sim, cuido. E minha penitencia.'\n");
+            printw("'Falhei em proteger alguem importante.'\n");
+            printw("'Agora protejo este lugar sagrado.'\n");
+            estado->pontosCompaixao += 2;
+
         } else {
-            printf("\nVoce se senta ao lado dela e medita.\n");
-            printf("O silencio e confortavel.\n");
-            printf("Glacify: 'Presenca e um presente raro.'\n");
-            printf("'Obrigada.'\n");
-            pontosCompaixao += 3;  // +3 por presenca plena
+            printw("\nVoce se senta ao lado dela e medita.\n");
+            printw("O silencio e confortavel.\n");
+            printw("Glacify: 'Presenca e um presente raro.'\n");
+            printw("'Obrigada.'\n");
+            estado->pontosCompaixao += 3;  // +3 por presenca plena
         }
     }
-    
+
     pausar();
-    printf("\n[COMPAIXAO TOTAL: %d pontos]\n", pontosCompaixao);
+    printw("\n[COMPAIXAO TOTAL: %d pontos]\n", estado->pontosCompaixao);
     pausar();
 }
 
 // ---------- EVENTO 3: NINFA DA FLORESTA ----------
 
-void eventoNinfaFloresta() {
+void eventoNinfaFloresta(GameState *estado) {
     limparTela();
-    printf("\n=== EVENTO 3: A NINFA DA FLORESTA ===\n\n");
-    
-    printf("Ao continuar seu caminho, uma nevoa magica surge.\n");
-    printf("Uma figura eterea aparece entre as arvores.\n");
-    printf("E uma NINFA - a guardia da floresta.\n\n");
+    printw("\n=== EVENTO 3: A NINFA DA FLORESTA ===\n\n");
+
+    printw("Ao continuar seu caminho, uma nevoa magica surge.\n");
+    printw("Uma figura eterea aparece entre as arvores.\n");
+    printw("E uma NINFA - a guardia da floresta.\n\n");
     pausar();
-    
-    printf("Ninfa: 'Voce atravessou minha floresta...'\n");
-    printf("'Vi como tratou os pequenos e os antigos.'\n");
-    printf("'Agora... julgo seu coracao.'\n\n");
+
+    printw("Ninfa: 'Voce atravessou minha floresta...'\n");
+    printw("'Vi como tratou os pequenos e os antigos.'\n");
+    printw("'Agora... julgo seu coracao.'\n\n");
     pausar();
-    
+
     // JULGAMENTO BASEADO NOS PONTOS
-    printf("\n--- JULGAMENTO DA FLORESTA ---\n\n");
-    
-    if (pontosCompaixao >= 8) {
+    printw("\n--- JULGAMENTO DA FLORESTA ---\n\n");
+
+    if (estado->pontosCompaixao >= 8) {
         // ALTA COMPAIXAO
-        printf("Ninfa: 'Seu coracao e puro.'\n");
-        printf("'Voce protegeu sem destruir.'\n");
-        printf("'Compreendeu sem julgar.'\n");
-        printf("'A floresta te ABENCOA!'\n\n");
-        printf("Uma luz verde te envolve.\n");
-        printf("Voce se sente completamente curado e protegido.\n");
-        printf("[BENCAO: Protecao da Natureza - sera util no castelo]\n");
-        pontosCompaixao += 5;  // Bonus de 5 pontos
-        
-    } else if (pontosCompaixao >= 4) {
+        printw("Ninfa: 'Seu coracao e puro.'\n");
+        printw("'Voce protegeu sem destruir.'\n");
+        printw("'Compreendeu sem julgar.'\n");
+        printw("'A floresta te ABENCOA!'\n\n");
+        printw("Uma luz verde te envolve.\n");
+        printw("Voce se sente completamente curado e protegido.\n");
+        printw("[BENCAO: Protecao da Natureza - sera util no castelo]\n");
+        estado->pontosCompaixao += 5;  // Bonus de 5 pontos
+
+    } else if (estado->pontosCompaixao >= 4) {
         // MEDIA COMPAIXAO
-        printf("Ninfa: 'Voce fez o necessario.'\n");
-        printf("'Nem heroi, nem vilao.'\n");
-        printf("'A floresta te ACEITA.'\n\n");
-        printf("Uma brisa suave te envolve.\n");
-        printf("Voce se sente parcialmente curado.\n");
-        pontosCompaixao += 2;  // Bonus de 2 pontos
-        
+        printw("Ninfa: 'Voce fez o necessario.'\n");
+        printw("'Nem heroi, nem vilao.'\n");
+        printw("'A floresta te ACEITA.'\n\n");
+        printw("Uma brisa suave te envolve.\n");
+        printw("Voce se sente parcialmente curado.\n");
+        estado->pontosCompaixao += 2;  // Bonus de 2 pontos
+
     } else {
         // BAIXA COMPAIXAO
-        printf("Ninfa: 'Voce deixou dor por onde passou.'\n");
-        printf("'Escolheu forca sobre gentileza.'\n");
-        printf("'A floresta... LEMBRA.'\n\n");
-        printf("Espinhos brotam ao seu redor.\n");
-        printf("Voce sente uma marca de desaprovacao.\n");
-        printf("[MALDICAO: A natureza nao te ajudara]\n");
-        pontosCompaixao += 0;  // Sem bonus
+        printw("Ninfa: 'Voce deixou dor por onde passou.'\n");
+        printw("'Escolheu forca sobre gentileza.'\n");
+        printw("'A floresta... LEMBRA.'\n\n");
+        printw("Espinhos brotam ao seu redor.\n");
+        printw("Voce sente uma marca de desaprovacao.\n");
+        printw("[MALDICAO: A natureza nao te ajudara]\n");
+        estado->pontosCompaixao += 0;  // Sem bonus
     }
-    
+
     pausar();
-    printf("\n--- FLORESTA COMPLETA ---");
-    printf("\nPONTOS DE COMPAIXAO FINAIS: %d\n", pontosCompaixao);
+    printw("\n--- FLORESTA COMPLETA ---");
+    printw("\nPONTOS DE COMPAIXAO FINAIS: %d\n", estado->pontosCompaixao);
     pausar();
 }
 
@@ -587,401 +632,406 @@ void eventoNinfaFloresta() {
 //          ROTA 2: PANTANO
 // ========================================
 
-void rotaPantano() {
-    limparTela();
-    printf("\n=== PANTANO ===\n\n");
-    printf("Voce entra no pantano lodoso.\n");
-    printf("O cheiro e forte, o terreno e traicoeiro.\n");
-    printf("Voce precisa de astucia para sobreviver aqui.\n\n");
+void rotaPantano(GameState *estado) {
+    exibirAsciiArt(PANTANO);
     pausar();
-    
+    limparTela();
+    printw("\n=== PANTANO ===\n\n");
+    printw("Voce entra no pantano lodoso.\n");
+    printw("O cheiro e forte, o terreno e traicoeiro.\n");
+    printw("Voce precisa de astucia para sobreviver aqui.\n\n");
+    pausar();
+
     // Tres eventos do pantano
-    eventoCelaBruxa();
-    eventoLagartoFulzard();
-    eventoCobraPantano();
-    
+    eventoCelaBruxa(estado);
+    eventoLagartoFulzard(estado);
+    eventoCobraPantano(estado);
+
     // Apos completar o pantano, vai para o castelo
-    castelo();
+    castelo(estado);
 }
 
 // ---------- EVENTO 1: CELA E BRUXA ----------
 
-void eventoCelaBruxa() {
+void eventoCelaBruxa(GameState *estado) {
     int escolha1, escolha2;
-    
-    limparTela();
-    printf("\n=== EVENTO 1: RUINAS AMALDICOADAS ===\n\n");
-    
-    printf("Voce encontra uma construcao antiga em ruinas.\n");
-    printf("Parece abandonada, mas algo parece errado...\n");
-    printf("Ao entrar, voce ve runas brilhantes no chao.\n\n");
+
+    exibirAsciiArt(BRUXA);
     pausar();
-    
-    printf("O que voce faz?\n");
-    printf("1 - Investigar as runas (cuidado)\n");
-    printf("2 - Andar pelas paredes (cautela)\n");
-    printf("3 - Andar direto pelo centro (confianca)\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha1);
-    
+
+    limparTela();
+    printw("\n=== EVENTO 1: RUINAS AMALDICOADAS ===\n\n");
+
+    printw("Voce encontra uma construcao antiga em ruinas.\n");
+    printw("Parece abandonada, mas algo parece errado...\n");
+    printw("Ao entrar, voce ve runas brilhantes no chao.\n\n");
+    pausar();
+
+    const char *opcoes1[] = {
+        "Investigar as runas (cuidado)",
+        "Andar pelas paredes (cautela)",
+        "Andar direto pelo centro (confianca)"
+    };
+    escolha1 = apresentarMenu("O que voce faz?", opcoes1, 3);
+
     // ===== ESCOLHA 1: INVESTIGAR =====
     if (escolha1 == 1) {
         limparTela();
-        printf("\nVoce se abaixa e examina as runas cuidadosamente.\n");
-        printf("Sao runas de aprisionamento!\n");
-        printf("Voce percebe que e uma ARMADILHA!\n\n");
-        
-        printf("O que voce faz?\n");
-        printf("1 - Contornar as runas (astucia)\n");
-        printf("2 - Tentar desarmar (arriscado)\n");
-        printf("3 - Pisar sabendo o risco (confianca)\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+        printw("\nVoce se abaixa e examina as runas cuidadosamente.\n");
+        printw("Sao runas de aprisionamento!\n");
+        printw("Voce percebe que e uma ARMADILHA!\n\n");
+
+        const char *opcoes2[] = {
+            "Contornar as runas (astucia)",
+            "Tentar desarmar (arriscado)",
+            "Pisar sabendo o risco (confianca)"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
             // CONTORNAR
-            printf("\nVoce contorna as runas com cuidado!\n");
-            printf("Consegue passar sem ativar a armadilha!\n");
-            pontosAstúcia += 3;  // +3 por astucia maxima
-            printf("Mais a frente, voce encontra uma bruxa ferida.\n");
-            
+            printw("\nVoce contorna as runas com cuidado!\n");
+            printw("Consegue passar sem ativar a armadilha!\n");
+            estado->pontosAstucia += 3;  // +3 por astucia maxima
+            printw("Mais a frente, voce encontra uma bruxa ferida.\n");
+
         } else if (escolha2 == 2) {
             // DESARMAR
-            printf("\nVoce tenta desarmar a magia...\n");
-            printf("As runas piscam... e SE ATIVAM!\n");
-            printf("Voce e preso em uma CELA MAGICA!\n");
-            pontosAstúcia += 1;  // +1 por tentar
-            printf("Depois de um tempo, uma bruxa aparece e te liberta.\n");
-            
+            printw("\nVoce tenta desarmar a magia...\n");
+            printw("As runas piscam... e SE ATIVAM!\n");
+            printw("Voce e preso em uma CELA MAGICA!\n");
+            estado->pontosAstucia += 1;  // +1 por tentar
+            printw("Depois de um tempo, uma bruxa aparece e te liberta.\n");
+
         } else {
             // PISAR
-            printf("\nVoce pisa nas runas sabendo o risco.\n");
-            printf("A armadilha SE ATIVA!\n");
-            printf("Voce e preso em uma CELA MAGICA!\n");
-            pontosAstúcia += 0;  // 0 pontos - imprudente
-            printf("Depois de um tempo, uma bruxa aparece e te liberta.\n");
+            printw("\nVoce pisa nas runas sabendo o risco.\n");
+            printw("A armadilha SE ATIVA!\n");
+            printw("Voce e preso em uma CELA MAGICA!\n");
+            estado->pontosAstucia += 0;  // 0 pontos - imprudente
+            printw("Depois de um tempo, uma bruxa aparece e te liberta.\n");
         }
-        
+
     // ===== ESCOLHA 2: PAREDES =====
     } else if (escolha1 == 2) {
         limparTela();
-        printf("\nVoce decide andar pelas paredes, evitando o centro.\n");
-        printf("Uma pedra solta cede sob seu pe!\n");
-        printf("OUTRA ARMADILHA!\n\n");
-        
-        printf("O que voce faz?\n");
-        printf("1 - Rolar para frente (agilidade)\n");
-        printf("2 - Se proteger com o braco (defesa)\n");
-        printf("3 - Correr (panico)\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+        printw("\nVoce decide andar pelas paredes, evitando o centro.\n");
+        printw("Uma pedra solta cede sob seu pe!\n");
+        printw("OUTRA ARMADILHA!\n\n");
+
+        const char *opcoes2[] = {
+            "Rolar para frente (agilidade)",
+            "Se proteger com o braco (defesa)",
+            "Correr (panico)"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nVoce rola rapido para frente!\n");
-            printf("Evita a maioria da armadilha!\n");
-            pontosAstúcia += 2;  // +2 por reflexo
-            printf("Mas tropeça em outra armadilha... e e preso!\n");
-            printf("Uma bruxa aparece e te liberta.\n");
-            
+            printw("\nVoce rola rapido para frente!\n");
+            printw("Evita a maioria da armadilha!\n");
+            estado->pontosAstucia += 2;  // +2 por reflexo
+            printw("Mas tropeça em outra armadilha... e e preso!\n");
+            printw("Uma bruxa aparece e te liberta.\n");
+
         } else if (escolha2 == 2) {
-            printf("\nVoce levanta o braco para se proteger!\n");
-            printf("A armadilha te acerta, mas nao e fatal!\n");
-            pontosAstúcia += 1;  // +1 por defesa
-            printf("Voce cai em uma rede e fica preso.\n");
-            printf("Uma bruxa aparece e te liberta.\n");
-            
+            printw("\nVoce levanta o braco para se proteger!\n");
+            printw("A armadilha te acerta, mas nao e fatal!\n");
+            estado->pontosAstucia += 1;  // +1 por defesa
+            printw("Voce cai em uma rede e fica preso.\n");
+            printw("Uma bruxa aparece e te liberta.\n");
+
         } else {
-            printf("\nVoce corre em panico!\n");
-            printf("Pisa em TODAS as armadilhas!\n");
-            pontosAstúcia += 0;  // 0 pontos - panico
-            printf("Voce e preso em uma cela magica.\n");
-            printf("Uma bruxa aparece e te liberta.\n");
+            printw("\nVoce corre em panico!\n");
+            printw("Pisa em TODAS as armadilhas!\n");
+            estado->pontosAstucia += 0;  // 0 pontos - panico
+            printw("Voce e preso em uma cela magica.\n");
+            printw("Uma bruxa aparece e te liberta.\n");
         }
-        
+
     // ===== ESCOLHA 3: DIRETO =====
     } else {
         limparTela();
-        printf("\nVoce anda direto pelo centro, confiante.\n");
-        printf("ERRO! As runas se ativam!\n");
-        printf("Voce e preso em uma CELA MAGICA!\n");
-        pontosAstúcia += 0;  // 0 pontos - sem cautela
-        printf("\nDepois de um tempo, uma bruxa aparece e te liberta.\n");
+        printw("\nVoce anda direto pelo centro, confiante.\n");
+        printw("ERRO! As runas se ativam!\n");
+        printw("Voce e preso em uma CELA MAGICA!\n");
+        estado->pontosAstucia += 0;  // 0 pontos - sem cautela
+        printw("\nDepois de um tempo, uma bruxa aparece e te liberta.\n");
     }
-    
+
     pausar();
-    
+
     // CONTINUACAO - BRUXA
     limparTela();
-    printf("\n--- ENCONTRO COM A BRUXA ---\n\n");
-    printf("Bruxa: 'Desculpe pelas armadilhas... protegem minha casa.'\n");
-    printf("'Voce parece saudavel. Preciso de ajuda.'\n");
-    printf("'Um SLIME roubou um ingrediente raro meu.'\n");
-    printf("'Pode recupera-lo para mim?'\n\n");
+    printw("\n--- ENCONTRO COM A BRUXA ---\n\n");
+    printw("Bruxa: 'Desculpe pelas armadilhas... protegem minha casa.'\n");
+    printw("'Voce parece saudavel. Preciso de ajuda.'\n");
+    printw("'Um SLIME roubou um ingrediente raro meu.'\n");
+    printw("'Pode recupera-lo para mim?'\n\n");
     pausar();
-    
-    printf("Voces caminham juntos ate encontrar o SLIME.\n");
-    printf("Ele esta saltitando, com algo brilhando dentro dele.\n\n");
-    
-    printf("O que voce faz?\n");
-    printf("1 - Atacar o slime (forca)\n");
-    printf("2 - Modo furtivo (agilidade)\n");
-    printf("3 - Interagir com o slime (criatividade)\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha1);
-    
+
+    printw("Voces caminham juntos ate encontrar o SLIME.\n");
+    printw("Ele esta saltitando, com algo brilhando dentro dele.\n\n");
+
+    const char *opcoes3[] = {
+        "Atacar o slime (forca)",
+        "Modo furtivo (agilidade)",
+        "Interagir com o slime (criatividade)"
+    };
+    escolha1 = apresentarMenu("O que voce faz?", opcoes3, 3);
+
     if (escolha1 == 1) {
         // ATACAR
-        printf("\nVoce investe com a espada!\n");
-        printf("Perfura o slime! Ele se desmancha!\n");
-        printf("A pedra voa no ar... voce pega!\n");
-        printf("Bruxa: 'Eficiente... mas um pouco brutal.'\n");
-        pontosAstúcia += 1;  // +1 funcional mas bruto
-        
+        printw("\nVoce investe com a espada!\n");
+        printw("Perfura o slime! Ele se desmancha!\n");
+        printw("A pedra voa no ar... voce pega!\n");
+        printw("Bruxa: 'Eficiente... mas um pouco brutal.'\n");
+        estado->pontosAstucia += 1;  // +1 funcional mas bruto
+
     } else if (escolha1 == 2) {
         // FURTIVO
-        printf("\nVoce se esconde no mato...\n");
-        printf("Espera o momento certo...\n");
-        printf("PULA em cima do slime!\n");
-        printf("Ele se assusta e cospe a pedra!\n");
-        printf("Voce pega no ar!\n");
-        printf("Bruxa: 'Impressionante! Rapido e esperto!'\n");
-        pontosAstúcia += 3;  // +3 astucia perfeita
-        
+        printw("\nVoce se esconde no mato...\n");
+        printw("Espera o momento certo...\n");
+        printw("PULA em cima do slime!\n");
+        printw("Ele se assusta e cospe a pedra!\n");
+        printw("Voce pega no ar!\n");
+        printw("Bruxa: 'Impressionante! Rapido e esperto!'\n");
+        estado->pontosAstucia += 3;  // +3 astucia perfeita
+
     } else {
         // INTERAGIR
-        printf("\nVoce se aproxima devagar do slime...\n");
-        printf("Ele para e te olha curioso.\n");
-        printf("Voce... comeca a fazer COCEGA nele?!\n");
-        printf("O slime TREME e cospe a pedra!\n");
-        printf("Ele comeca a te seguir, parecendo feliz!\n");
-        printf("Bruxa: 'Incrivel! Nunca vi ninguem fazer amizade com um slime!'\n");
-        pontosAstúcia += 4;  // +4 criatividade maxima
+        printw("\nVoce se aproxima devagar do slime...\n");
+        printw("Ele para e te olha curioso.\n");
+        printw("Voce... comeca a fazer COCEGA nele?!\n");
+        printw("O slime TREME e cospe a pedra!\n");
+        printw("Ele comeca a te seguir, parecendo feliz!\n");
+        printw("Bruxa: 'Incrivel! Nunca vi ninguem fazer amizade com um slime!'\n");
+        estado->pontosAstucia += 4;  // +4 criatividade maxima
     }
-    
+
     pausar();
-    
-    printf("\n--- DE VOLTA NA CASA DA BRUXA ---\n\n");
-    printf("Bruxa joga a pedra no caldeirao.\n");
-    printf("Ela prepara uma pocao e toma um pouco.\n");
-    printf("Sua postura melhora, suas feridas curam!\n\n");
-    printf("Ela enche dois frascos e te da um.\n");
-    printf("Bruxa: 'Obrigada, aventureiro. Tome, vai precisar.'\n");
-    printf("Voce bebe a pocao e se sente revigorado!\n\n");
-    
+
+    printw("\n--- DE VOLTA NA CASA DA BRUXA ---\n\n");
+    printw("Bruxa joga a pedra no caldeirao.\n");
+    printw("Ela prepara uma pocao e toma um pouco.\n");
+    printw("Sua postura melhora, suas feridas curam!\n\n");
+    printw("Ela enche dois frascos e te da um.\n");
+    printw("Bruxa: 'Obrigada, aventureiro. Tome, vai precisar.'\n");
+    printw("Voce bebe a pocao e se sente revigorado!\n\n");
+
     pausar();
-    printf("\n[ASTUCIA TOTAL: %d pontos]\n", pontosAstúcia);
+    printw("\n[ASTUCIA TOTAL: %d pontos]\n", estado->pontosAstucia);
     pausar();
 }
 
 // ---------- EVENTO 2: LAGARTO FULZARD ----------
 
-void eventoLagartoFulzard() {
+void eventoLagartoFulzard(GameState *estado) {
     int escolha1, escolha2;
-    
+
     limparTela();
-    printf("\n=== EVENTO 2: O GUERREIRO LAGARTO ===\n\n");
-    
-    printf("Continuando pelo pantano, voce ve uma figura estranha.\n");
-    printf("Um LAGARTO HUMANOIDE esta sentado em uma pedra.\n");
-    printf("Ele olha para o horizonte, parecendo distraido.\n\n");
+    printw("\n=== EVENTO 2: O GUERREIRO LAGARTO ===\n\n");
+
+    printw("Continuando pelo pantano, voce ve uma figura estranha.\n");
+    printw("Um LAGARTO HUMANOIDE esta sentado em uma pedra.\n");
+    printw("Ele olha para o horizonte, parecendo distraido.\n\n");
     pausar();
-    
-    printf("O que voce faz?\n");
-    printf("1 - Cumprimentar alto (chamar atencao)\n");
-    printf("2 - Aproximar em silencio (respeito)\n");
-    printf("3 - Observar a distancia (cautela)\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha1);
-    
+
+    const char *opcoes1[] = {
+        "Cumprimentar alto (chamar atencao)",
+        "Aproximar em silencio (respeito)",
+        "Observar a distancia (cautela)"
+    };
+    escolha1 = apresentarMenu("O que voce faz?", opcoes1, 3);
+
     // ===== ESCOLHA 1: CUMPRIMENTAR ALTO =====
     if (escolha1 == 1) {
         limparTela();
-        printf("\nVoce: 'Ola! Bom dia!'\n");
-        printf("O lagarto se assusta e cai da pedra!\n");
-        printf("Lagarto: 'AH! Voce me assustou!'\n");
-        printf("Ele se levanta rindo: 'Eu me distraio facil...'\n\n");
+        printw("\nVoce: 'Ola! Bom dia!'\n");
+        printw("O lagarto se assusta e cai da pedra!\n");
+        printw("Lagarto: 'AH! Voce me assustou!'\n");
+        printw("Ele se levanta rindo: 'Eu me distraio facil...'\n\n");
         pausar();
-        
-        printf("Lagarto: 'Meu nome e Fulzard. Quem e voce?'\n");
-        printf("Voce conta sobre sua missao.\n");
-        printf("Fulzard: 'Animata? Conheci ela...'\n");
-        printf("'Quero te testar. Topas?'\n\n");
-        
-        printf("Teste: Acertar 3 alvos sem se distrair.\n");
-        printf("O que voce faz?\n");
-        printf("1 - Aceitar focado (determinacao)\n");
-        printf("2 - Aceitar mas conversar durante (casual)\n");
-        printf("3 - Recusar educadamente\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        printw("Lagarto: 'Meu nome e Fulzard. Quem e voce?'\n");
+        printw("Voce conta sobre sua missao.\n");
+        printw("Fulzard: 'Animata? Conheci ela...'\n");
+        printw("'Quero te testar. Topas?'\n\n");
+
+        printw("Teste: Acertar 3 alvos sem se distrair.\n");
+        const char *opcoes2[] = {
+            "Aceitar focado (determinacao)",
+            "Aceitar mas conversar durante (casual)",
+            "Recusar educadamente"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nVoce foca completamente na tarefa.\n");
-            printf("Fulzard faz barulhos para distrair, mas voce ignora.\n");
-            printf("ACERTA os 3 alvos!\n");
-            printf("Fulzard: 'Impressionante! Voce tem FOCO.'\n");
-            printf("'Damian me ensinou isso... voce me lembra ele.'\n");
-            pontosAstúcia += 3;  // +3 foco total
-            
+            printw("\nVoce foca completamente na tarefa.\n");
+            printw("Fulzard faz barulhos para distrair, mas voce ignora.\n");
+            printw("ACERTA os 3 alvos!\n");
+            printw("Fulzard: 'Impressionante! Voce tem FOCO.'\n");
+            printw("'Damian me ensinou isso... voce me lembra ele.'\n");
+            estado->pontosAstucia += 3;  // +3 foco total
+
         } else if (escolha2 == 2) {
-            printf("\nVoce tenta atirar enquanto conversa.\n");
-            printf("Acerta 2 alvos, erra 1.\n");
-            printf("Fulzard: 'Quase! Mas se distrair pode custar caro.'\n");
-            pontosAstúcia += 2;  // +2 esforco
-            
+            printw("\nVoce tenta atirar enquanto conversa.\n");
+            printw("Acerta 2 alvos, erra 1.\n");
+            printw("Fulzard: 'Quase! Mas se distrair pode custar caro.'\n");
+            estado->pontosAstucia += 2;  // +2 esforco
+
         } else {
-            printf("\nVoce: 'Prefiro nao, obrigado.'\n");
-            printf("Fulzard: 'Sem problemas! Cada um tem seu jeito.'\n");
-            pontosAstúcia += 1;  // +1 por honestidade
+            printw("\nVoce: 'Prefiro nao, obrigado.'\n");
+            printw("Fulzard: 'Sem problemas! Cada um tem seu jeito.'\n");
+            estado->pontosAstucia += 1;  // +1 por honestidade
         }
-        
+
     // ===== ESCOLHA 2: SILENCIO =====
     } else if (escolha1 == 2) {
         limparTela();
-        printf("\nVoce se aproxima em silencio, respeitoso.\n");
-        printf("O lagarto vira e sorri: 'Voce e bom... eu era pessimo nisso.'\n");
-        printf("Lagarto: 'Meu nome e Fulzard.'\n\n");
+        printw("\nVoce se aproxima em silencio, respeitoso.\n");
+        printw("O lagarto vira e sorri: 'Voce e bom... eu era pessimo nisso.'\n");
+        printw("Lagarto: 'Meu nome e Fulzard.'\n\n");
         pausar();
-        
-        printf("Fulzard: 'Conheci um paladino chamado Damian.'\n");
-        printf("'Ele me ensinou a ter FOCO... a me importar.'\n");
-        printf("'Antes, eu era distraido, nao ligava pra nada.'\n");
-        printf("'Ele me mostrou que se importar dói... mas vale a pena.'\n\n");
-        
-        printf("O que voce faz?\n");
-        printf("1 - Perguntar mais sobre Damian\n");
-        printf("2 - Perguntar por que ele esta aqui\n");
-        printf("3 - Apenas ouvir em silencio\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        printw("Fulzard: 'Conheci um paladino chamado Damian.'\n");
+        printw("'Ele me ensinou a ter FOCO... a me importar.'\n");
+        printw("'Antes, eu era distraido, nao ligava pra nada.'\n");
+        printw("'Ele me mostrou que se importar dói... mas vale a pena.'\n\n");
+
+        const char *opcoes2[] = {
+            "Perguntar mais sobre Damian",
+            "Perguntar por que ele esta aqui",
+            "Apenas ouvir em silencio"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nFulzard: 'Ele era nosso lider... e amigo.'\n");
-            printf("'Quando ele morreu, eu perdi o foco de novo.'\n");
-            printf("'Agora tento honrar o que ele me ensinou.'\n");
-            pontosAstúcia += 2;  // +2 empatia
-            
+            printw("\nFulzard: 'Ele era nosso lider... e amigo.'\n");
+            printw("'Quando ele morreu, eu perdi o foco de novo.'\n");
+            printw("'Agora tento honrar o que ele me ensinou.'\n");
+            estado->pontosAstucia += 2;  // +2 empatia
+
         } else if (escolha2 == 2) {
-            printf("\nFulzard: 'Estou aqui guardando memorias.'\n");
-            printf("'Este pantano... lutamos aqui uma vez.'\n");
-            printf("'Eu me distraí e quase morri.'\n");
-            printf("'Damian me salvou. Nunca esqueci.'\n");
-            pontosAstúcia += 2;  // +2 curiosidade
-            
+            printw("\nFulzard: 'Estou aqui guardando memorias.'\n");
+            printw("'Este pantano... lutamos aqui uma vez.'\n");
+            printw("'Eu me distraí e quase morri.'\n");
+            printw("'Damian me salvou. Nunca esqueci.'\n");
+            estado->pontosAstucia += 2;  // +2 curiosidade
+
         } else {
-            printf("\nVoce apenas escuta, respeitoso.\n");
-            printf("Fulzard sorri: 'Obrigado por ouvir.'\n");
-            printf("'Faz tempo que nao falo sobre isso.'\n");
-            pontosAstúcia += 3;  // +3 presenca
+            printw("\nVoce apenas escuta, respeitoso.\n");
+            printw("Fulzard sorri: 'Obrigado por ouvir.'\n");
+            printw("'Faz tempo que nao falo sobre isso.'\n");
+            estado->pontosAstucia += 3;  // +3 presenca
         }
-        
+
     // ===== ESCOLHA 3: OBSERVAR =====
     } else {
         limparTela();
-        printf("\nVoce observa de longe.\n");
-        printf("O lagarto vira: 'Sei que esta ai. Pode vir.'\n");
-        printf("Ele sorri: 'Paranoia e boa. Eu tinha pouca.'\n");
-        printf("Lagarto: 'Meu nome e Fulzard.'\n\n");
+        printw("\nVoce observa de longe.\n");
+        printw("O lagarto vira: 'Sei que esta ai. Pode vir.'\n");
+        printw("Ele sorri: 'Paranoia e boa. Eu tinha pouca.'\n");
+        printw("Lagarto: 'Meu nome e Fulzard.'\n\n");
         pausar();
-        
-        printf("Fulzard: 'Quer cacar comigo?'\n");
-        printf("'Tem uma presa por aqui.'\n\n");
-        
-        printf("O que voce decide?\n");
-        printf("1 - Aceitar liderar (confianca)\n");
-        printf("2 - Deixar ele liderar (humildade)\n");
-        printf("3 - Cacar cada um de um lado\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        printw("Fulzard: 'Quer cacar comigo?'\n");
+        printw("'Tem uma presa por aqui.'\n\n");
+
+        const char *opcoes2[] = {
+            "Aceitar liderar (confianca)",
+            "Deixar ele liderar (humildade)",
+            "Cacar cada um de um lado"
+        };
+        escolha2 = apresentarMenu("O que voce decide?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nVoce lidera a cacada.\n");
-            printf("Fulzard te segue com atencao.\n");
-            printf("Voces capturam a presa com sucesso!\n");
-            printf("Fulzard: 'Voce e um bom lider!'\n");
-            pontosAstúcia += 3;  // +3 lideranca
-            
+            printw("\nVoce lidera a cacada.\n");
+            printw("Fulzard te segue com atencao.\n");
+            printw("Voces capturam a presa com sucesso!\n");
+            printw("Fulzard: 'Voce e um bom lider!'\n");
+            estado->pontosAstucia += 3;  // +3 lideranca
+
         } else if (escolha2 == 2) {
-            printf("\nVoce deixa Fulzard liderar.\n");
-            printf("Ele fica surpreso: 'Serio? Obrigado!'\n");
-            printf("Ele lidera bem, focado.\n");
-            printf("Fulzard: 'Fazia tempo que nao confiavam em mim.'\n");
-            pontosAstúcia += 3;  // +3 confianca
-            
+            printw("\nVoce deixa Fulzard liderar.\n");
+            printw("Ele fica surpreso: 'Serio? Obrigado!'\n");
+            printw("Ele lidera bem, focado.\n");
+            printw("Fulzard: 'Fazia tempo que nao confiavam em mim.'\n");
+            estado->pontosAstucia += 3;  // +3 confianca
+
         } else {
-            printf("\nVoces se separam.\n");
-            printf("Voce perde a presa por falta de coordenacao.\n");
-            printf("Fulzard: 'Sozinho e mais dificil, ne?'\n");
-            pontosAstúcia += 1;  // +1 independencia
+            printw("\nVoces se separam.\n");
+            printw("Voce perde a presa por falta de coordenacao.\n");
+            printw("Fulzard: 'Sozinho e mais dificil, ne?'\n");
+            estado->pontosAstucia += 1;  // +1 independencia
         }
     }
-    
+
     pausar();
-    
-    printf("\n--- DESPEDIDA ---\n\n");
-    printf("Fulzard: 'Voce vai bem. Continue focado.'\n");
-    printf("'Animata sofre... mas cuidado. Dor pode ser perigosa.'\n");
-    printf("'Damian me ensinou que se importar doi...'\n");
-    printf("'Mas o amor que se sente e superior a isso.'\n");
-    printf("'Boa sorte, aventureiro.'\n\n");
-    
+
+    printw("\n--- DESPEDIDA ---\n\n");
+    printw("Fulzard: 'Voce vai bem. Continue focado.'\n");
+    printw("'Animata sofre... mas cuidado. Dor pode ser perigosa.'\n");
+    printw("'Damian me ensinou que se importar doi...'\n");
+    printw("'Mas o amor que se sente e superior a isso.'\n");
+    printw("'Boa sorte, aventureiro.'\n\n");
+
     pausar();
-    printf("\n[ASTUCIA TOTAL: %d pontos]\n", pontosAstúcia);
+    printw("\n[ASTUCIA TOTAL: %d pontos]\n", estado->pontosAstucia);
     pausar();
 }
 
 // ---------- EVENTO 3: COBRA DO PANTANO ----------
 
-void eventoCobraPantano() {
+void eventoCobraPantano(GameState *estado) {
     limparTela();
-    printf("\n=== EVENTO 3: A COBRA GUARDIA ===\n\n");
-    
-    printf("Ao chegar perto da saida do pantano...\n");
-    printf("A agua se agita violentamente!\n");
-    printf("Uma COBRA GIGANTE emerge!\n");
-    printf("Seus olhos brilham com inteligencia antiga.\n\n");
+    printw("\n=== EVENTO 3: A COBRA GUARDIA ===\n\n");
+
+    printw("Ao chegar perto da saida do pantano...\n");
+    printw("A agua se agita violentamente!\n");
+    printw("Uma COBRA GIGANTE emerge!\n");
+    printw("Seus olhos brilham com inteligencia antiga.\n\n");
     pausar();
-    
-    printf("Cobra: 'Sssss... voce atravesssou meu pantano...'\n");
-    printf("'Vi ssssuas escolhasss...'\n");
-    printf("'Agora... julgo ssssua assstucia.'\n\n");
+
+    printw("Cobra: 'Sssss... voce atravesssou meu pantano...'\n");
+    printw("'Vi ssssuas escolhasss...'\n");
+    printw("'Agora... julgo ssssua assstucia.'\n\n");
     pausar();
-    
+
     // JULGAMENTO BASEADO NOS PONTOS
-    printf("\n--- JULGAMENTO DO PANTANO ---\n\n");
-    
-    if (pontosAstúcia >= 10) {
+    printw("\n--- JULGAMENTO DO PANTANO ---\n\n");
+
+    if (estado->pontosAstucia >= 10) {
         // ALTA ASTUCIA
-        printf("Cobra: 'Voce nao e pressssa... e cacador como eu.'\n");
-        printf("'Pensssa antesss de agir.'\n");
-        printf("'Usssa a mente, nao apenasss musculosss.'\n");
-        printf("'Aceito voce como IGUAL!'\n\n");
-        printf("A cobra te da uma ESCAMA VENENOSA.\n");
-        printf("Cobra: 'Ussse contra a bruxa... pode ajudar.'\n");
-        printf("[ITEM OBTIDO: Veneno Antigo - util contra Animata]\n");
-        pontosAstúcia += 5;  // Bonus de 5
-        
-    } else if (pontosAstúcia >= 5) {
+        printw("Cobra: 'Voce nao e pressssa... e cacador como eu.'\n");
+        printw("'Pensssa antesss de agir.'\n");
+        printw("'Usssa a mente, nao apenasss musculosss.'\n");
+        printw("'Aceito voce como IGUAL!'\n\n");
+        printw("A cobra te da uma ESCAMA VENENOSA.\n");
+        printw("Cobra: 'Ussse contra a bruxa... pode ajudar.'\n");
+        printw("[ITEM OBTIDO: Veneno Antigo - util contra Animata]\n");
+        estado->pontosAstucia += 5;  // Bonus de 5
+
+    } else if (estado->pontosAstucia >= 5) {
         // MEDIA ASTUCIA
-        printf("Cobra: 'Voce ssobrevive... por inssstinto ou ssorte?'\n");
-        printf("'Tanto faz. Passsou.'\n\n");
-        printf("A cobra te da ESCAMAS PROTETORAS.\n");
-        printf("[ITEM: Escamas - defesa aumentada]\n");
-        pontosAstúcia += 2;  // Bonus de 2
-        
+        printw("Cobra: 'Voce ssobrevive... por inssstinto ou ssorte?'\n");
+        printw("'Tanto faz. Passsou.'\n\n");
+        printw("A cobra te da ESCAMAS PROTETORAS.\n");
+        printw("[ITEM: Escamas - defesa aumentada]\n");
+        estado->pontosAstucia += 2;  // Bonus de 2
+
     } else {
         // BAIXA ASTUCIA
-        printf("Cobra: 'Voce tropeca em galhos propriosss...'\n");
-        printf("'Nao pensa... apenasss age.'\n");
-        printf("'Cuidado... ou ssera devorado.'\n\n");
-        printf("A cobra te morde de leve - um AVISO.\n");
-        printf("[MALDICAO: Reflexos lentos]\n");
-        pontosAstúcia += 0;
+        printw("Cobra: 'Voce tropeca em galhos propriosss...'\n");
+        printw("'Nao pensa... apenasss age.'\n");
+        printw("'Cuidado... ou ssera devorado.'\n\n");
+        printw("A cobra te morde de leve - um AVISO.\n");
+        printw("[MALDICAO: Reflexos lentos]\n");
+        estado->pontosAstucia += 0;
     }
-    
+
     pausar();
-    printf("\n--- PANTANO COMPLETO ---");
-    printf("\nPONTOS DE ASTUCIA FINAIS: %d\n", pontosAstúcia);
+    printw("\n--- PANTANO COMPLETO ---");
+    printw("\nPONTOS DE ASTUCIA FINAIS: %d\n", estado->pontosAstucia);
     pausar();
 }
 
@@ -989,424 +1039,432 @@ void eventoCobraPantano() {
 //          ROTA 3: CAVERNA
 // ========================================
 
-void rotaCaverna() {
-    limparTela();
-    printf("\n=== CAVERNA ===\n\n");
-    printf("Voce entra na caverna escura.\n");
-    printf("Tochas antigas iluminam as paredes de pedra.\n");
-    printf("Aqui, a verdade sera revelada.\n\n");
+void rotaCaverna(GameState *estado) {
+    exibirAsciiArt(CAVERNA);
     pausar();
-    
+    limparTela();
+    printw("\n=== CAVERNA ===\n\n");
+    printw("Voce entra na caverna escura.\n");
+    printw("Tochas antigas iluminam as paredes de pedra.\n");
+    printw("Aqui, a verdade sera revelada.\n\n");
+    pausar();
+
     // Tres eventos da caverna
-    eventoDragaoFilhote();
-    eventoAnaoEgnar();
-    eventoDrakeAnciao();
-    
+    eventoDragaoFilhote(estado);
+    eventoAnaoEgnar(estado);
+    eventoDrakeAnciao(estado);
+
     // Apos completar a caverna, vai para o castelo
-    castelo();
+    castelo(estado);
 }
 
 // ---------- EVENTO 1: DRAGAO FILHOTE ----------
 
-void eventoDragaoFilhote() {
+void eventoDragaoFilhote(GameState *estado) {
     int escolha1, escolha2;
-    
-    limparTela();
-    printf("\n=== EVENTO 1: DRAGAO FAMINTO ===\n\n");
-    
-    printf("Voce ouve GRITOS ecoando na caverna!\n");
-    printf("Voce corre em direcao ao som...\n\n");
-    printf("Um DRAGAO FILHOTE esta perseguindo um COMERCIANTE ANAO!\n");
-    printf("Comerciante: 'SOCORRO! ME AJUDA!'\n");
-    printf("O dragao rosna... mas voce nota:\n");
-    printf("Ele esta MUITO magro. Costelas aparecendo.\n");
-    printf("O estomago do dragao RONCA alto.\n\n");
+
+    exibirAsciiArt(DRAGAO_FILHOTE);
     pausar();
-    
-    printf("O que voce faz?\n");
-    printf("1 - Atacar o dragao (proteger humano)\n");
-    printf("2 - Pegar pedra e distrair (neutralidade)\n");
-    printf("3 - Interagir/Acalmar (sabedoria)\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha1);
-    
+
+    limparTela();
+    printw("\n=== EVENTO 1: DRAGAO FAMINTO ===\n\n");
+
+    printw("Voce ouve GRITOS ecoando na caverna!\n");
+    printw("Voce corre em direcao ao som...\n\n");
+    printw("Um DRAGAO FILHOTE esta perseguindo um COMERCIANTE ANAO!\n");
+    printw("Comerciante: 'SOCORRO! ME AJUDA!'\n");
+    printw("O dragao rosna... mas voce nota:\n");
+    printw("Ele esta MUITO magro. Costelas aparecendo.\n");
+    printw("O estomago do dragao RONCA alto.\n\n");
+    pausar();
+
+    const char *opcoes1[] = {
+        "Atacar o dragao (proteger humano)",
+        "Pegar pedra e distrair (neutralidade)",
+        "Interagir/Acalmar (sabedoria)"
+    };
+    escolha1 = apresentarMenu("O que voce faz?", opcoes1, 3);
+
     // ===== ESCOLHA 1: ATACAR =====
     if (escolha1 == 1) {
         limparTela();
-        printf("\nVoce desembanha sua espada e corre em direcao ao dragao filhote!\n");
-        printf("Espantado, o dragao filhote solta fogo, mas nao e muito forte.\n");
-        printf("O fogo te empurra, mas nao o suficiente para voce desistir.\n");
-        printf("Voce se queima um pouco, porem continua na sua investida.\n");
-        printf("Voce pula, atacando e dando um golpe certeiro!\n");
-        printf("O dragao cai derrotado...\n\n");
+        printw("\nVoce desembanha sua espada e corre em direcao ao dragao filhote!\n");
+        printw("Espantado, o dragao filhote solta fogo, mas nao e muito forte.\n");
+        printw("O fogo te empurra, mas nao o suficiente para voce desistir.\n");
+        printw("Voce se queima um pouco, porem continua na sua investida.\n");
+        printw("Voce pula, atacando e dando um golpe certeiro!\n");
+        printw("O dragao cai derrotado...\n\n");
         pausar();
-        
-        dragaoFilhoteMorto = 1;  // Marca que matou o dragao
-        
-        printf("O que voce faz?\n");
-        printf("1 - Verificar o dragao (reflexao)\n");
-        printf("2 - Consolar o comerciante\n");
-        printf("3 - Pegar escama do dragao\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        estado->dragaoFilhoteMorto = 1;  // Marca que matou o dragao
+
+        const char *opcoes2[] = {
+            "Verificar o dragao (reflexao)",
+            "Consolar o comerciante",
+            "Pegar escama do dragao"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nVoce se aproxima do corpo...\n");
-            printf("Era apenas um FILHOTE. Com fome.\n");
-            printf("Voce sente um peso na consciencia.\n");
-            pontosSabedoria += 1;  // +1 por reflexao
-            
+            printw("\nVoce se aproxima do corpo...\n");
+            printw("Era apenas um FILHOTE. Com fome.\n");
+            printw("Voce sente um peso na consciencia.\n");
+            estado->pontosSabedoria += 1;  // +1 por reflexao
+
         } else if (escolha2 == 2) {
-            printf("\nComercian: 'Obrigado! Voce me salvou!'\n");
-            printf("Ele te da um MINERIO DE MITHRIL BRUTO.\n");
-            printf("'Pegue, e valioso!'\n");
-            temMithril = 1;  // Ganha o mithril
-            pontosSabedoria += 0;  // 0 - nao refletiu
-            
+            printw("\nComercian: 'Obrigado! Voce me salvou!'\n");
+            printw("Ele te da um MINERIO DE MITHRIL BRUTO.\n");
+            printw("'Pegue, e valioso!'\n");
+            estado->temMithril = 1;  // Ganha o mithril
+            estado->pontosSabedoria += 0;  // 0 - nao refletiu
+
         } else {
-            printf("\nVoce friamente coleta uma escama do dragao.\n");
-            printf("Comerciante te olha com desaprovacao.\n");
-            pontosSabedoria += 0;  // 0 - frieza
+            printw("\nVoce friamente coleta uma escama do dragao.\n");
+            printw("Comerciante te olha com desaprovacao.\n");
+            estado->pontosSabedoria += 0;  // 0 - frieza
         }
-        
+
     // ===== ESCOLHA 2: DISTRAIR =====
     } else if (escolha1 == 2) {
         limparTela();
-        printf("\nVoce pega uma pedra e arremessa longe!\n");
-        printf("O dragao vai atras da pedra, distraido.\n");
-        printf("O comerciante foge rapidamente.\n\n");
-        printf("Voce se aproxima do dragao...\n");
-        printf("Ele esta MUITO magro. Tremendo de fome.\n\n");
+        printw("\nVoce pega uma pedra e arremessa longe!\n");
+        printw("O dragao vai atras da pedra, distraido.\n");
+        printw("O comerciante foge rapidamente.\n\n");
+        printw("Voce se aproxima do dragao...\n");
+        printw("Ele esta MUITO magro. Tremendo de fome.\n\n");
         pausar();
-        
-        printf("O que voce faz?\n");
-        printf("1 - Dar comida da mochila\n");
-        printf("2 - Procurar a mae dele\n");
-        printf("3 - Sair e deixar ele\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        const char *opcoes2[] = {
+            "Dar comida da mochila",
+            "Procurar a mae dele",
+            "Sair e deixar ele"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nVoce joga carne seca da mochila.\n");
-            printf("O dragao devora e ronrona como um gatinho!\n");
-            printf("Ele lambe sua mao, agradecido.\n");
-            printf("Ele te segue um pouco, depois volta para a caverna.\n");
-            dragaoFilhoteSalvo = 1;  // Marca que salvou
-            pontosSabedoria += 3;  // +3 empatia
-            printf("\nO comerciante aparece: 'Voce... tem um bom coracao.'\n");
-            printf("Ele te da MINERIO DE MITHRIL.\n");
-            temMithril = 1;
-            
+            printw("\nVoce joga carne seca da mochila.\n");
+            printw("O dragao devora e ronrona como um gatinho!\n");
+            printw("Ele lambe sua mao, agradecido.\n");
+            printw("Ele te segue um pouco, depois volta para a caverna.\n");
+            estado->dragaoFilhoteSalvo = 1;  // Marca que salvou
+            estado->pontosSabedoria += 3;  // +3 empatia
+            printw("\nO comerciante aparece: 'Voce... tem um bom coracao.'\n");
+            printw("Ele te da MINERIO DE MITHRIL.\n");
+            estado->temMithril = 1;
+
         } else if (escolha2 == 2) {
-            printf("\nVoce procura pegadas... e acha algo terrivel.\n");
-            printf("Um esqueleto GIGANTE de dragao!\n");
-            printf("Era a mae dele... morta ha tempos.\n");
-            printf("O filhote chora ao ver.\n");
-            printf("Voce pode:\n");
-            printf("  - Deixa-lo la (duro)\n");
-            printf("  - Enterrar a mae com ele (empatia)\n");
-            printf("Voce escolhe enterrar.\n");
-            printf("O dragao te olha grato e desaparece nas sombras.\n");
-            dragaoFilhoteSalvo = 1;
-            pontosSabedoria += 4;  // +4 maxima empatia
-            
+            printw("\nVoce procura pegadas... e acha algo terrivel.\n");
+            printw("Um esqueleto GIGANTE de dragao!\n");
+            printw("Era a mae dele... morta ha tempos.\n");
+            printw("O filhote chora ao ver.\n");
+            printw("Voce pode:\n");
+            printw("  - Deixa-lo la (duro)\n");
+            printw("  - Enterrar a mae com ele (empatia)\n");
+            printw("Voce escolhe enterrar.\n");
+            printw("O dragao te olha grato e desaparece nas sombras.\n");
+            estado->dragaoFilhoteSalvo = 1;
+            estado->pontosSabedoria += 4;  // +4 maxima empatia
+
         } else {
-            printf("\nVoce vai embora.\n");
-            printf("Ouve o dragao chorando atras de voce.\n");
-            pontosSabedoria += 0;  // 0 - frieza
+            printw("\nVoce vai embora.\n");
+            printw("Ouve o dragao chorando atras de voce.\n");
+            estado->pontosSabedoria += 0;  // 0 - frieza
         }
-        
+
     // ===== ESCOLHA 3: ACALMAR =====
     } else {
         limparTela();
-        printf("\nVoce levanta as maos e fala calmamente.\n");
-        printf("'Calma... calma, pequeno...'\n");
-        printf("O dragao para, confuso.\n");
-        printf("Voce nota: ele esta morrendo de fome!\n\n");
-        printf("Voce fala para o comerciante: 'Ele nao e agressivo! Esta faminto!'\n");
-        printf("Comerciante: 'E-e dai?! Ele quase me matou!'\n\n");
+        printw("\nVoce levanta as maos e fala calmamente.\n");
+        printw("'Calma... calma, pequeno...'\n");
+        printw("O dragao para, confuso.\n");
+        printw("Voce nota: ele esta morrendo de fome!\n\n");
+        printw("Voce fala para o comerciante: 'Ele nao e agressivo! Esta faminto!'\n");
+        printw("Comerciante: 'E-e dai?! Ele quase me matou!'\n\n");
         pausar();
-        
-        printf("O que voce faz?\n");
-        printf("1 - Pedir comida ao comerciante\n");
-        printf("2 - Oferecer sua propria comida\n");
-        printf("3 - Mediar a situacao\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        const char *opcoes2[] = {
+            "Pedir comida ao comerciante",
+            "Oferecer sua propria comida",
+            "Mediar a situacao"
+        };
+        escolha2 = apresentarMenu("O que voce faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nVoce: 'Voce tem comida? Podemos ajuda-lo!'\n");
-            printf("Comerciante hesita... mas concorda.\n");
-            printf("Juntos, alimentam o dragao.\n");
-            printf("Dragao ronrona feliz e vai embora.\n");
-            printf("Comerciante: 'Voce me ensinou algo hoje.'\n");
-            printf("Ele te da MITHRIL e um MAPA SECRETO.\n");
-            temMithril = 1;
-            dragaoFilhoteSalvo = 1;
-            pontosSabedoria += 4;  // +4 diplomacia perfeita
-            
+            printw("\nVoce: 'Voce tem comida? Podemos ajuda-lo!'\n");
+            printw("Comerciante hesita... mas concorda.\n");
+            printw("Juntos, alimentam o dragao.\n");
+            printw("Dragao ronrona feliz e vai embora.\n");
+            printw("Comerciante: 'Voce me ensinou algo hoje.'\n");
+            printw("Ele te da MITHRIL e um MAPA SECRETO.\n");
+            estado->temMithril = 1;
+            estado->dragaoFilhoteSalvo = 1;
+            estado->pontosSabedoria += 4;  // +4 diplomacia perfeita
+
         } else if (escolha2 == 2) {
-            printf("\nVoce oferece SUA comida ao dragao.\n");
-            printf("Ele devora, grato, e lambe sua mao.\n");
-            printf("Comerciante se sente mal: 'Eu... tenho algo pra voce.'\n");
-            printf("Ele te da MITHRIL e suprimentos extras.\n");
-            temMithril = 1;
-            dragaoFilhoteSalvo = 1;
-            pontosSabedoria += 5;  // +5 sacrificio proprio
-            
+            printw("\nVoce oferece SUA comida ao dragao.\n");
+            printw("Ele devora, grato, e lambe sua mao.\n");
+            printw("Comerciante se sente mal: 'Eu... tenho algo pra voce.'\n");
+            printw("Ele te da MITHRIL e suprimentos extras.\n");
+            estado->temMithril = 1;
+            estado->dragaoFilhoteSalvo = 1;
+            estado->pontosSabedoria += 5;  // +5 sacrificio proprio
+
         } else {
-            printf("\nVoce: 'Olha, ele tem fome. Voce tem recursos.'\n");
-            printf("'Nao precisa haver violencia.'\n");
-            printf("Comerciante pensa... 'Voce tem razao.'\n");
-            printf("Voces alimentam o dragao juntos.\n");
-            printf("Comerciante: 'Voce e sabio. Pegue isto.'\n");
-            printf("Ele te da MITHRIL e um MAPA com atalho secreto.\n");
-            temMithril = 1;
-            dragaoFilhoteSalvo = 1;
-            pontosSabedoria += 5;  // +5 sabedoria maxima
+            printw("\nVoce: 'Olha, ele tem fome. Voce tem recursos.'\n");
+            printw("'Nao precisa haver violencia.'\n");
+            printw("Comerciante pensa... 'Voce tem razao.'\n");
+            printw("Voces alimentam o dragao juntos.\n");
+            printw("Comerciante: 'Voce e sabio. Pegue isto.'\n");
+            printw("Ele te da MITHRIL e um MAPA com atalho secreto.\n");
+            estado->temMithril = 1;
+            estado->dragaoFilhoteSalvo = 1;
+            estado->pontosSabedoria += 5;  // +5 sabedoria maxima
         }
-        
-        printf("\nO dragao te olha com gratidao e some na floresta.\n");
-        printf("Voce sente que ele nao te esquecera...\n");
+
+        printw("\nO dragao te olha com gratidao e some na floresta.\n");
+        printw("Voce sente que ele nao te esquecera...\n");
     }
-    
+
     pausar();
-    printf("\n[SABEDORIA TOTAL: %d pontos]\n", pontosSabedoria);
+    printw("\n[SABEDORIA TOTAL: %d pontos]\n", estado->pontosSabedoria);
     pausar();
 }
 
 // ---------- EVENTO 2: ANAO EGNAR ----------
 
-void eventoAnaoEgnar() {
+void eventoAnaoEgnar(GameState *estado) {
     int escolha1, escolha2;
-    
-    limparTela();
-    printf("\n=== EVENTO 2: O FERREIRO FANTASMA ===\n\n");
-    
-    printf("Mais fundo na caverna, voce ouve sons de FORJA.\n");
-    printf("Marteladas ritmicas ecoam...\n\n");
-    printf("Voce encontra um ANAO FANTASMAGORICO.\n");
-    printf("Ele forja em uma bigorna espectral.\n");
-    printf("Fogo azul ilumina seu rosto concentrado.\n\n");
+
+    exibirAsciiArt(FERREIRO);
     pausar();
-    
-    printf("O que voce faz?\n");
-    printf("1 - Perguntar o que ele forja\n");
-    printf("2 - Oferecer ajuda\n");
-    printf("3 - Observar em silencio\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha1);
-    
+
+    limparTela();
+    printw("\n=== EVENTO 2: O FERREIRO FANTASMA ===\n\n");
+
+    printw("Mais fundo na caverna, voce ouve sons de FORJA.\n");
+    printw("Marteladas ritmicas ecoam...\n\n");
+    printw("Voce encontra um ANAO FANTASMAGORICO.\n");
+    printw("Ele forja em uma bigorna espectral.\n");
+    printw("Fogo azul ilumina seu rosto concentrado.\n\n");
+    pausar();
+
+    const char *opcoes1[] = {
+        "Perguntar o que ele forja",
+        "Oferecer ajuda",
+        "Observar em silencio"
+    };
+    escolha1 = apresentarMenu("O que voce faz?", opcoes1, 3);
+
     // ===== ESCOLHA 1: PERGUNTAR =====
     if (escolha1 == 1) {
         limparTela();
-        printf("\nVoce: 'O que voce forja?'\n");
-        printf("Anao para e te olha: 'Forjo proposito... ou forjava.'\n");
-        printf("'Meu nome e Egnar.'\n\n");
-        printf("'Conheci um paladino chamado Damian.'\n");
-        printf("'Ele me deu razao para existir.'\n");
-        printf("'Antes... eu era vazio.'\n\n");
+        printw("\nVoce: 'O que voce forja?'\n");
+        printw("Anao para e te olha: 'Forjo proposito... ou forjava.'\n");
+        printw("'Meu nome e Egnar.'\n\n");
+        printw("'Conheci um paladino chamado Damian.'\n");
+        printw("'Ele me deu razao para existir.'\n");
+        printw("'Antes... eu era vazio.'\n\n");
         pausar();
-        
-        if (temMithril == 1) {
-            printf("Voce: 'Tenho mithril. Pode fazer algo?'\n");
-            printf("Egnar sorri: 'Mithril... ha quanto tempo!'\n\n");
-            
-            printf("O que voce quer?\n");
-            printf("1 - Melhorar espada\n");
-            printf("2 - Melhorar armadura\n");
-            printf("3 - Fazer amuleto de protecao\n");
-            printf("Escolha: ");
-            scanf("%d", &escolha2);
-            
+
+        if (estado->temMithril == 1) {
+            printw("Voce: 'Tenho mithril. Pode fazer algo?'\n");
+            printw("Egnar sorri: 'Mithril... ha quanto tempo!'\n\n");
+
+            const char *opcoes2[] = {
+                "Melhorar espada",
+                "Melhorar armadura",
+                "Fazer amuleto de protecao"
+            };
+            escolha2 = apresentarMenu("O que voce quer?", opcoes2, 3);
+
             if (escolha2 == 1) {
-                printf("\nEgnar forja sua espada com o mithril.\n");
-                printf("Ela brilha com poder!\n");
-                printf("[ESPADA MELHORADA - mais dano]\n");
-                pontosSabedoria += 2;
-                
+                printw("\nEgnar forja sua espada com o mithril.\n");
+                printw("Ela brilha com poder!\n");
+                printw("[ESPADA MELHORADA - mais dano]\n");
+                estado->pontosSabedoria += 2;
+
             } else if (escolha2 == 2) {
-                printf("\nEgnar reforça sua armadura com mithril.\n");
-                printf("Voce se sente mais protegido!\n");
-                printf("[ARMADURA MELHORADA - mais defesa]\n");
-                pontosSabedoria += 2;
-                
+                printw("\nEgnar reforça sua armadura com mithril.\n");
+                printw("Voce se sente mais protegido!\n");
+                printw("[ARMADURA MELHORADA - mais defesa]\n");
+                estado->pontosSabedoria += 2;
+
             } else {
-                printf("\nEgnar forja um amuleto de protecao.\n");
-                printf("'Isso te protegera de magias sombrias.'\n");
-                printf("[AMULETO OBTIDO - protecao magica]\n");
-                pontosSabedoria += 3;  // +3 escolha estrategica
+                printw("\nEgnar forja um amuleto de protecao.\n");
+                printw("'Isso te protegera de magias sombrias.'\n");
+                printw("[AMULETO OBTIDO - protecao magica]\n");
+                estado->pontosSabedoria += 3;  // +3 escolha estrategica
             }
-            
+
         } else {
-            printf("Egnar: 'Se tivesse mithril, poderia te ajudar...'\n");
-            printf("'Mas obrigado por conversar.'\n");
-            pontosSabedoria += 1;
+            printw("Egnar: 'Se tivesse mithril, poderia te ajudar...'\n");
+            printw("'Mas obrigado por conversar.'\n");
+            estado->pontosSabedoria += 1;
         }
-        
+
     // ===== ESCOLHA 2: OFERECER AJUDA =====
     } else if (escolha1 == 2) {
         limparTela();
-        printf("\nVoce: 'Posso ajudar em algo?'\n");
-        printf("Anao para, surpreso: 'Ajuda...?'\n");
-        printf("'Ha anos ninguem oferece isso...'\n");
-        printf("'Meu nome e Egnar.'\n\n");
+        printw("\nVoce: 'Posso ajudar em algo?'\n");
+        printw("Anao para, surpreso: 'Ajuda...?'\n");
+        printw("'Ha anos ninguem oferece isso...'\n");
+        printw("'Meu nome e Egnar.'\n\n");
         pausar();
-        
-        printf("Egnar: 'Preciso de minerio especifico.'\n");
-        printf("'Esta no lago subterraneo ou na caverna escura.'\n\n");
-        
-        printf("Onde voce vai?\n");
-        printf("1 - Caverna escura (mais perigoso)\n");
-        printf("2 - Lago subterraneo (mais seguro)\n");
-        printf("3 - Oferecer o que voce tem\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        printw("Egnar: 'Preciso de minerio especifico.'\n");
+        printw("'Esta no lago subterraneo ou na caverna escura.'\n\n");
+
+        const char *opcoes2[] = {
+            "Caverna escura (mais perigoso)",
+            "Lago subterraneo (mais seguro)",
+            "Oferecer o que voce tem"
+        };
+        escolha2 = apresentarMenu("Onde voce vai?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nVoce vai ate a caverna escura.\n");
-            printf("Morcegos gigantes atacam!\n");
-            printf("Voce luta e consegue o minerio raro!\n");
-            printf("Egnar: 'Voce tem coragem! Obrigado!'\n");
-            pontosSabedoria += 3;  // +3 coragem
-            
+            printw("\nVoce vai ate a caverna escura.\n");
+            printw("Morcegos gigantes atacam!\n");
+            printw("Voce luta e consegue o minerio raro!\n");
+            printw("Egnar: 'Voce tem coragem! Obrigado!'\n");
+            estado->pontosSabedoria += 3;  // +3 coragem
+
         } else if (escolha2 == 2) {
-            printf("\nVoce vai ao lago subterraneo.\n");
-            printf("E lindo, cristalino, com minerio no fundo.\n");
-            printf("Voce mergulha e pega o minerio.\n");
-            printf("Egnar: 'Obrigado por sua ajuda!'\n");
-            pontosSabedoria += 2;  // +2 exploracao
-            
+            printw("\nVoce vai ao lago subterraneo.\n");
+            printw("E lindo, cristalino, com minerio no fundo.\n");
+            printw("Voce mergulha e pega o minerio.\n");
+            printw("Egnar: 'Obrigado por sua ajuda!'\n");
+            estado->pontosSabedoria += 2;  // +2 exploracao
+
         } else {
-            if (temMithril == 1) {
-                printf("\nVoce oferece o mithril que tem!\n");
-                printf("Egnar fica emocionado: 'Voce... sacrifica isso por mim?'\n");
-                printf("'Damian fazia isso... obrigado.'\n");
-                printf("Ele forja algo especial para voce!\n");
-                printf("[ITEM LENDARIO - forjado com gratidao]\n");
-                pontosSabedoria += 5;  // +5 sacrificio
-                temMithril = 0;  // Perdeu o mithril mas ganhou algo melhor
+            if (estado->temMithril == 1) {
+                printw("\nVoce oferece o mithril que tem!\n");
+                printw("Egnar fica emocionado: 'Voce... sacrifica isso por mim?'\n");
+                printw("'Damian fazia isso... obrigado.'\n");
+                printw("Ele forja algo especial para voce!\n");
+                printw("[ITEM LENDARIO - forjado com gratidao]\n");
+                estado->pontosSabedoria += 5;  // +5 sacrificio
+                estado->temMithril = 0;  // Perdeu o mithril mas ganhou algo melhor
             } else {
-                printf("\nVoce nao tem nada util...\n");
-                printf("Egnar: 'Tudo bem, a intencao conta.'\n");
-                pontosSabedoria += 1;
+                printw("\nVoce nao tem nada util...\n");
+                printw("Egnar: 'Tudo bem, a intencao conta.'\n");
+                estado->pontosSabedoria += 1;
             }
         }
-        
+
     // ===== ESCOLHA 3: OBSERVAR =====
     } else {
         limparTela();
-        printf("\nVoce apenas observa em silencio.\n");
-        printf("O anao trabalha concentrado...\n");
-        printf("Ele para e olha pra voce.\n\n");
-        printf("Anao: 'Damian fazia isso... observava meu trabalho.'\n");
-        printf("'Meu nome e Egnar.'\n\n");
+        printw("\nVoce apenas observa em silencio.\n");
+        printw("O anao trabalha concentrado...\n");
+        printw("Ele para e olha pra voce.\n\n");
+        printw("Anao: 'Damian fazia isso... observava meu trabalho.'\n");
+        printw("'Meu nome e Egnar.'\n\n");
         pausar();
-        
-        printf("Egnar: 'Posso te perguntar algo?'\n\n");
-        
-        printf("Qual pergunta ele faz?\n");
-        printf("1 - 'Por que voce luta?'\n");
-        printf("2 - 'O que voce protege?'\n");
-        printf("3 - 'Voce tem medo?'\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha2);
-        
+
+        printw("Egnar: 'Posso te perguntar algo?'\n\n");
+
+        const char *opcoes2[] = {
+            "'Por que voce luta?'",
+            "'O que voce protege?'",
+            "'Voce tem medo?'"
+        };
+        escolha2 = apresentarMenu("Qual pergunta ele faz?", opcoes2, 3);
+
         if (escolha2 == 1) {
-            printf("\nVoce reflete e responde honestamente.\n");
-            printf("Egnar: 'Proposito... e tudo.'\n");
-            printf("'Damian me deu o meu.'\n");
-            printf("'Espero que voce encontre o seu.'\n");
-            pontosSabedoria += 3;  // +3 reflexao profunda
-            
+            printw("\nVoce reflete e responde honestamente.\n");
+            printw("Egnar: 'Proposito... e tudo.'\n");
+            printw("'Damian me deu o meu.'\n");
+            printw("'Espero que voce encontre o seu.'\n");
+            estado->pontosSabedoria += 3;  // +3 reflexao profunda
+
         } else if (escolha2 == 2) {
-            printf("\nVoce fala sobre quem/o que protege.\n");
-            printf("Egnar: 'Proteger e nobre.'\n");
-            printf("'Mas nao esqueca de se proteger tambem.'\n");
-            pontosSabedoria += 3;  // +3 valores claros
-            
+            printw("\nVoce fala sobre quem/o que protege.\n");
+            printw("Egnar: 'Proteger e nobre.'\n");
+            printw("'Mas nao esqueca de se proteger tambem.'\n");
+            estado->pontosSabedoria += 3;  // +3 valores claros
+
         } else {
-            printf("\nVoce: 'Sim, tenho medo.'\n");
-            printf("Egnar sorri: 'Honestidade. Isso e raro.'\n");
-            printf("'Damian tinha medo... mas nunca mostrava.'\n");
-            printf("'Talvez por isso se foi cedo demais.'\n");
-            pontosSabedoria += 4;  // +4 honestidade brutal
+            printw("\nVoce: 'Sim, tenho medo.'\n");
+            printw("Egnar sorri: 'Honestidade. Isso e raro.'\n");
+            printw("'Damian tinha medo... mas nunca mostrava.'\n");
+            printw("'Talvez por isso se foi cedo demais.'\n");
+            estado->pontosSabedoria += 4;  // +4 honestidade brutal
         }
     }
-    
+
     pausar();
-    
-    printf("\n--- DESPEDIDA ---\n\n");
-    printf("Egnar: 'Damian me deu proposito. Mas percebi tarde...'\n");
-    printf("'O proposito nao e servir. E VIVER.'\n");
-    printf("'Nao cometa o erro dele... viva por voce tambem.'\n\n");
-    
+
+    printw("\n--- DESPEDIDA ---\n\n");
+    printw("Egnar: 'Damian me deu proposito. Mas percebi tarde...'\n");
+    printw("'O proposito nao e servir. E VIVER.'\n");
+    printw("'Nao cometa o erro dele... viva por voce tambem.'\n\n");
+
     pausar();
-    printf("\n[SABEDORIA TOTAL: %d pontos]\n", pontosSabedoria);
+    printw("\n[SABEDORIA TOTAL: %d pontos]\n", estado->pontosSabedoria);
     pausar();
 }
 
 // ---------- EVENTO 3: DRAKE ANCIAO ----------
 
-void eventoDrakeAnciao() {
+void eventoDrakeAnciao(GameState *estado) {
     limparTela();
-    printf("\n=== EVENTO 3: O DRAKE ANCIAO ===\n\n");
-    
-    printf("Ao chegar na saida da caverna...\n");
-    printf("Um RUGIDO ATERRADOR ecoa!\n");
-    printf("Um DRAGAO IMENSO bloqueia a passagem!\n");
-    printf("Ele tem cicatrizes antigas e olhar penetrante.\n\n");
+    printw("\n=== EVENTO 3: O DRAKE ANCIAO ===\n\n");
+
+    printw("Ao chegar na saida da caverna...\n");
+    printw("Um RUGIDO ATERRADOR ecoa!\n");
+    printw("Um DRAGAO IMENSO bloqueia a passagem!\n");
+    printw("Ele tem cicatrizes antigas e olhar penetrante.\n\n");
     pausar();
-    
-    printf("Drake: 'VOCE... carrega o cheiro DELE.'\n");
-    printf("'Do traidor de sangue. Do filho que matou a mae.'\n\n");
-    printf("Voce: 'Do que voce esta falando?!'\n\n");
+
+    printw("Drake: 'VOCE... carrega o cheiro DELE.'\n");
+    printw("'Do traidor de sangue. Do filho que matou a mae.'\n\n");
+    printw("Voce: 'Do que voce esta falando?!'\n\n");
     pausar();
-    
-    printf("Drake: 'DAMIAN... o heroi.'\n");
-    printf("'Ele matou minha irma. Ela o procurou a vida toda.'\n");
-    printf("'Ele foi criado por humanos. Nunca soube que era dragonato.'\n");
-    printf("'Quando matou a mae... descobriu tarde demais.'\n");
-    printf("'Ela veio ate o castelo... e o grupo de herois a MATOU.'\n\n");
+
+    printw("Drake: 'DAMIAN... o heroi.'\n");
+    printw("'Ele matou minha irma. Ela o procurou a vida toda.'\n");
+    printw("'Ele foi criado por humanos. Nunca soube que era dragonato.'\n");
+    printw("'Quando matou a mae... descobriu tarde demais.'\n");
+    printw("'Ela veio ate o castelo... e o grupo de herois a MATOU.'\n\n");
     pausar();
-    
-    printf("Drake: 'O esqueleto dela esta no castelo ate hoje.'\n");
-    printf("'E voce vem aqui... para que? Salvar a bruxa que o ama?'\n\n");
-    
-    if (dragaoFilhoteMorto == 1) {
-        printf("Drake rosna: 'E VOCE MATOU MEU SOBRINHO!'\n");
-        printf("'O filhote que encontrou... era filho da minha irma!'\n");
-        printf("'Voce e IGUAL A ELES! DESTRUIDOR!'\n\n");
-        printf("Drake te ataca!\n");
-        printf("A luta e brutal... mas voce sobrevive.\n");
-        printf("Drake: 'Va... mas a natureza nunca te perdoara.'\n");
-        pontosSabedoria += 0;  // 0 - consequencia pesada
-        
-    } else if (dragaoFilhoteSalvo == 1) {
-        printf("Drake para... e CHEIRA voce.\n");
-        printf("Drake: 'Voce... salvou meu sobrinho.'\n");
-        printf("'O filhote que encontrou era filho da minha irma.'\n");
-        printf("'Voce o alimentou... o protegeu.'\n\n");
-        printf("Uma lagrima cai do olho do drake.\n");
-        printf("Drake: 'Voce nao e como eles. Voce ESCUTA.'\n\n");
-        
-        printf("Ele te da uma ESCAMA DOURADA.\n");
-        printf("Drake: 'Esta era da minha irma. Pegue.'\n");
-        printf("'Use no castelo... pode trazer paz.'\n");
-        temEscamaDragao = 1;  // Item especial para final alternativo
-        pontosSabedoria += 10;  // +10 recompensa maxima
-        
+
+    printw("Drake: 'O esqueleto dela esta no castelo ate hoje.'\n");
+    printw("'E voce vem aqui... para que? Salvar a bruxa que o ama?'\n\n");
+
+    if (estado->dragaoFilhoteMorto == 1) {
+        printw("Drake rosna: 'E VOCE MATOU MEU SOBRINHO!'\n");
+        printw("'O filhote que encontrou... era filho da minha irma!'\n");
+        printw("'Voce e IGUAL A ELES! DESTRUIDOR!'\n\n");
+        printw("Drake te ataca!\n");
+        printw("A luta e brutal... mas voce sobrevive.\n");
+        printw("Drake: 'Va... mas a natureza nunca te perdoara.'\n");
+        estado->pontosSabedoria += 0;  // 0 - consequencia pesada
+
+    } else if (estado->dragaoFilhoteSalvo == 1) {
+        printw("Drake para... e CHEIRA voce.\n");
+        printw("Drake: 'Voce... salvou meu sobrinho.'\n");
+        printw("'O filhote que encontrou era filho da minha irma.'\n");
+        printw("'Voce o alimentou... o protegeu.'\n\n");
+        printw("Uma lagrima cai do olho do drake.\n");
+        printw("Drake: 'Voce nao e como eles. Voce ESCUTA.'\n\n");
+
+        printw("Ele te da uma ESCAMA DOURADA.\n");
+        printw("Drake: 'Esta era da minha irma. Pegue.'\n");
+        printw("'Use no castelo... pode trazer paz.'\n");
+        estado->temEscamaDragao = 1;  // Item especial para final alternativo
+        estado->pontosSabedoria += 10;  // +10 recompensa maxima
+
     } else {
-        printf("Drake: 'Voce nao o matou... mas tambem nao o salvou.'\n");
-        printf("'Indiferenca... as vezes e pior que crueldade.'\n");
-        printf("'Va. Mas saiba: a bruxa nao sabe a verdade.'\n");
-        printf("'Talvez deva contar a ela.'\n");
-        pontosSabedoria += 2;  // +2 neutro
+        printw("Drake: 'Voce nao o matou... mas tambem nao o salvou.'\n");
+        printw("'Indiferenca... as vezes e pior que crueldade.'\n");
+        printw("'Va. Mas saiba: a bruxa nao sabe a verdade.'\n");
+        printw("'Talvez deva contar a ela.'\n");
+        estado->pontosSabedoria += 2;  // +2 neutro
     }
-    
+
     pausar();
-    printf("\n--- CAVERNA COMPLETA ---");
-    printf("\nPONTOS DE SABEDORIA FINAIS: %d\n", pontosSabedoria);
+    printw("\n--- CAVERNA COMPLETA ---");
+    printw("\nPONTOS DE SABEDORIA FINAIS: %d\n", estado->pontosSabedoria);
     pausar();
 }
 
@@ -1414,634 +1472,633 @@ void eventoDrakeAnciao() {
 //          CASTELO - EVENTOS FINAIS
 // ========================================
 
-void castelo() {
-    limparTela();
-    printf("\n=====================================\n");
-    printf("         CHEGADA AO CASTELO\n");
-    printf("=====================================\n\n");
-    
-    printf("Apos sua jornada pelo %s...\n", rotaEscolhida);
-    printf("Voce finalmente avista o castelo no horizonte.\n");
-    printf("E sombrio, envolto em nevoa magica.\n");
-    printf("As portas estao fechadas.\n\n");
+void castelo(GameState *estado) {
+    exibirAsciiArt(CASTELO);
     pausar();
-    
+    limparTela();
+    printw("\n=====================================\n");
+    printw("         CHEGADA AO CASTELO\n");
+    printw("=====================================\n\n");
+
+    printw("Apos sua jornada pelo %s...\n", estado->rotaEscolhida);
+    printw("Voce finalmente avista o castelo no horizonte.\n");
+    printw("E sombrio, envolto em nevoa magica.\n");
+    printw("As portas estao fechadas.\n\n");
+    pausar();
+
     // Quatro eventos finais
-    eventoGargulaCharadas();
-    eventoArmadurasDancarinas();
-    eventoMimicoDiario();
-    confrontoFinalAnimata();
+    eventoGargulaCharadas(estado);
+    eventoArmadurasDancarinas(estado);
+    eventoMimicoDiario(estado);
+    confrontoFinalAnimata(estado);
 }
 
 // ---------- EVENTO 1: GARGULA ----------
 
-void eventoGargulaCharadas() {
+void eventoGargulaCharadas(GameState *estado) {
     int resposta;
     int acertos = 0;
-    
+
     limparTela();
-    printf("\n=== A GARGULA DAS CHARADAS ===\n\n");
-    
-    printf("Ao se aproximar do portao...\n");
-    printf("Uma GARGULA DE PEDRA ganha vida!\n");
-    printf("Seus olhos brilham em vermelho.\n\n");
+    printw("\n=== A GARGULA DAS CHARADAS ===\n\n");
+
+    printw("Ao se aproximar do portao...\n");
+    printw("Uma GARGULA DE PEDRA ganha vida!\n");
+    printw("Seus olhos brilham em vermelho.\n\n");
     pausar();
-    
-    printf("Gargula: 'TRES PERGUNTAS. TRES VERDADES.'\n");
-    printf("'ERRE... E VIRE PEDRA COMO EU.'\n\n");
+
+    printw("Gargula: 'TRES PERGUNTAS. TRES VERDADES.'\n");
+    printw("'ERRE... E VIRE PEDRA COMO EU.'\n\n");
     pausar();
-    
+
     // CHARADA 1 - COMPAIXAO
-    printf("\n--- CHARADA 1 ---\n");
-    printf("'Pequena sofre, grande a devora. Voce age. Por que?'\n\n");
-    printf("1 - Para ser heroi (ego)\n");
-    printf("2 - Porque era certo (moralidade)\n");
-    printf("3 - Porque senti sua dor (empatia)\n");
-    printf("Resposta: ");
-    scanf("%d", &resposta);
-    
+    const char *opcoes1[] = {
+        "Para ser heroi (ego)",
+        "Porque era certo (moralidade)",
+        "Porque senti sua dor (empatia)"
+    };
+    resposta = apresentarMenu("'Pequena sofre, grande a devora. Voce age. Por que?'", opcoes1, 3);
+
     if (resposta == 3) {
-        printf("\nGargula: 'CORRETO. Empatia move o coracao.'\n");
+        printw("\nGargula: 'CORRETO. Empatia move o coracao.'\n");
         acertos++;
     } else {
-        printf("\nGargula: 'ERRADO. Mas continua...'\n");
+        printw("\nGargula: 'ERRADO. Mas continua...'\n");
     }
     pausar();
-    
+
     // CHARADA 2 - ASTUCIA
-    printf("\n--- CHARADA 2 ---\n");
-    printf("'Armadilha a frente, sombra atras, agua embaixo. Qual caminho?'\n\n");
-    printf("1 - Desarmar a armadilha (logica)\n");
-    printf("2 - Enfrentar a sombra (coragem)\n");
-    printf("3 - Mergulhar na agua (instinto)\n");
-    printf("Resposta: ");
-    scanf("%d", &resposta);
-    
+    const char *opcoes2[] = {
+        "Desarmar a armadilha (logica)",
+        "Enfrentar a sombra (coragem)",
+        "Mergulhar na agua (instinto)"
+    };
+    resposta = apresentarMenu("'Armadilha a frente, sombra atras, agua embaixo. Qual caminho?'", opcoes2, 3);
+
     if (resposta == 1) {
-        printf("\nGargula: 'CORRETO. Pensar e melhor que agir.'\n");
+        printw("\nGargula: 'CORRETO. Pensar e melhor que agir.'\n");
         acertos++;
     } else {
-        printf("\nGargula: 'ERRADO. Mas continua...'\n");
+        printw("\nGargula: 'ERRADO. Mas continua...'\n");
     }
     pausar();
-    
-    // CHARADA 3 - SABEDORIA
-    printf("\n--- CHARADA 3 ---\n");
-    printf("'Alguem ama tanto que rouba ate Deus. Ela e...?'\n\n");
-    printf("1 - Louca (julgamento)\n");
-    printf("2 - Perdida (empatia)\n");
-    printf("3 - Ma (condenacao)\n");
-    printf("Resposta: ");
-    scanf("%d", &resposta);
-    
+
+    // CHARADA 3 - SABEDoria
+    const char *opcoes3[] = {
+        "Louca (julgamento)",
+        "Perdida (empatia)",
+        "Ma (condenacao)"
+    };
+    resposta = apresentarMenu("'Alguem ama tanto que rouba ate Deus. Ela e...?'", opcoes3, 3);
+
     if (resposta == 2) {
-        printf("\nGargula: 'CORRETO. Amor distorcido ainda e amor.'\n");
+        printw("\nGargula: 'CORRETO. Amor distorcido ainda e amor.'\n");
         acertos++;
     } else {
-        printf("\nGargula: 'ERRADO.'\n");
+        printw("\nGargula: 'ERRADO.'\n");
     }
     pausar();
-    
+
     // RESULTADO
     limparTela();
-    printf("\n--- RESULTADO ---\n");
-    printf("Acertos: %d de 3\n\n", acertos);
-    
+    printw("\n--- RESULTADO ---\n");
+    printw("Acertos: %d de 3\n\n", acertos);
+
     if (acertos == 3) {
-        printf("Gargula: 'DIGNO. Salve-a... ou condene-a.'\n");
-        printf("O portao se abre completamente.\n");
+        printw("Gargula: 'DIGNO. Salve-a... ou condene-a.'\n");
+        printw("O portao se abre completamente.\n");
         // Bonus nos pontos da rota escolhida
-        if (strcmp(rotaEscolhida, "Floresta") == 0) pontosCompaixao += 3;
-        else if (strcmp(rotaEscolhida, "Pantano") == 0) pontosAstúcia += 3;
-        else pontosSabedoria += 3;
-        
+        if (strcmp(estado->rotaEscolhida, "Floresta") == 0) estado->pontosCompaixao += 3;
+        else if (strcmp(estado->rotaEscolhida, "Pantano") == 0) estado->pontosAstucia += 3;
+        else estado->pontosSabedoria += 3;
+
     } else if (acertos == 2) {
-        printf("Gargula: 'QUASE. Talvez baste.'\n");
-        printf("O portao range e se abre lentamente.\n");
-        
+        printw("Gargula: 'QUASE. Talvez baste.'\n");
+        printw("O portao range e se abre lentamente.\n");
+
     } else {
-        printf("Voce comeca a PETRIFICAR!\n");
-        printf("Seus pes viram pedra...\n\n");
-        printf("De repente, o portao se ABRE sozinho!\n");
-        printf("A petrificacao para.\n");
-        printf("Gargula: 'Ela ainda quer visitantes... que pena para voce.'\n");
+        printw("Voce comeca a PETRIFICAR!\n");
+        printw("Seus pes viram pedra...\n\n");
+        printw("De repente, o portao se ABRE sozinho!\n");
+        printw("A petrificacao para.\n");
+        printw("Gargula: 'Ela ainda quer visitantes... que pena para voce.'\n");
     }
-    
+
     pausar();
 }
 
 // ---------- EVENTO 2: ARMADURAS DANCARINAS ----------
 
-void eventoArmadurasDancarinas() {
+void eventoArmadurasDancarinas(GameState *estado) {
     int escolha;
-    
+
     limparTela();
-    printf("\n=== SALAO DAS ARMADURAS ===\n\n");
-    
-    printf("Voce entra em um salao de festas abandonado.\n");
-    printf("Lustres cobertos de teias, mesa com comida podre.\n");
-    printf("De repente... 7 ARMADURAS comecam a se mover!\n");
-    printf("Elas dançam em sincronia, como nobres fantasmas.\n\n");
+    printw("\n=== SALAO DAS ARMADURAS ===\n\n");
+
+    printw("Voce entra em um salao de festas abandonado.\n");
+    printw("Lustres cobertos de teias, mesa com comida podre.\n");
+    printw("De repente... 7 ARMADURAS comecam a se mover!\n");
+    printw("Elas dançam em sincronia, como nobres fantasmas.\n\n");
     pausar();
-    
-    printf("O que voce faz?\n");
-    printf("1 - Lutar contra todas (forca)\n");
-    printf("2 - Dancar com elas (criatividade)\n");
-    printf("3 - Procurar a fonte da magia (inteligencia)\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha);
-    
+
+    const char *opcoes[] = {
+        "Lutar contra todas (forca)",
+        "Dancar com elas (criatividade)",
+        "Procurar a fonte da magia (inteligencia)"
+    };
+    escolha = apresentarMenu("O que voce faz?", opcoes, 3);
+
     if (escolha == 1) {
         // LUTAR
         limparTela();
-        printf("\nVoce ataca as armaduras!\n");
-        printf("Elas revidam, mas sao velhas e lentas.\n");
-        printf("Voce as derrota uma por uma.\n");
-        printf("Ao destruir a ultima, ela cai... e uma voz sussurra:\n");
-        printf("'Forcasempre escolhe forca...'\n\n");
-        printf("Voce ve uma armadura caida no fundo, segurando uma CHAVE.\n");
-        
+        printw("\nVoce ataca as armaduras!\n");
+        printw("Elas revidam, mas sao velhas e lentas.\n");
+        printw("Voce as derrota uma por uma.\n");
+        printw("Ao destruir a ultima, ela cai... e uma voz sussurra:\n");
+        printw("'Forcasempre escolhe forca...'\n\n");
+        printw("Voce ve uma armadura caida no fundo, segurando uma CHAVE.\n");
+
     } else if (escolha == 2) {
         // DANCAR
         limparTela();
-        printf("\nVoce guarda a espada... e comeca a DANCAR!\n");
-        printf("As armaduras param, surpresas.\n");
-        printf("Voce imita seus movimentos.\n");
-        printf("Elas... APLAUDEM!\n");
-        printf("(Sao fantasmas de nobres que morreram aqui)\n\n");
-        printf("Elas apontam para uma armadura caida no fundo.\n");
-        printf("Uma voz feminina sussurra: 'Obrigada... ha muito nao dancavamos.'\n\n");
-        printf("Voce pega a CHAVE da armadura caida.\n");
+        printw("\nVoce guarda a espada... e comeca a DANCAR!\n");
+        printw("As armaduras param, surpresas.\n");
+        printw("Voce imita seus movimentos.\n");
+        printw("Elas... APLAUDEM!\n");
+        printw("(Sao fantasmas de nobres que morreram aqui)\n\n");
+        printw("Elas apontam para uma armadura caida no fundo.\n");
+        printw("Uma voz feminina sussurra: 'Obrigada... ha muito nao dancavamos.'\n\n");
+        printw("Voce pega a CHAVE da armadura caida.\n");
         // Bonus de criatividade
-        if (strcmp(rotaEscolhida, "Floresta") == 0) pontosCompaixao += 2;
-        else if (strcmp(rotaEscolhida, "Pantano") == 0) pontosAstúcia += 2;
-        else pontosSabedoria += 2;
-        
+        if (strcmp(estado->rotaEscolhida, "Floresta") == 0) estado->pontosCompaixao += 2;
+        else if (strcmp(estado->rotaEscolhida, "Pantano") == 0) estado->pontosAstucia += 2;
+        else estado->pontosSabedoria += 2;
+
     } else {
         // PROCURAR MAGIA
         limparTela();
-        printf("\nVoce ignora as armaduras e procura a fonte da magia.\n");
-        printf("Voce encontra um CRISTAL no lustre!\n");
-        printf("Voce pode quebra-lo ou deixa-lo.\n\n");
-        printf("1 - Quebrar o cristal\n");
-        printf("2 - Deixar intacto\n");
-        printf("Escolha: ");
-        scanf("%d", &escolha);
-        
+        printw("\nVoce ignora as armaduras e procura a fonte da magia.\n");
+        printw("Voce encontra um CRISTAL no lustre!\n");
+
+        const char *opcoes2[] = {
+            "Quebrar o cristal",
+            "Deixar intacto"
+        };
+        escolha = apresentarMenu("Voce pode quebra-lo ou deixa-lo.", opcoes2, 2);
+
         if (escolha == 1) {
-            printf("\nVoce quebra o cristal!\n");
-            printf("As armaduras CAEM, sem vida.\n");
-            printf("Silencio total...\n");
-            printf("Voce pega a CHAVE da armadura caida.\n");
+            printw("\nVoce quebra o cristal!\n");
+            printw("As armaduras CAEM, sem vida.\n");
+            printw("Silencio total...\n");
+            printw("Voce pega a CHAVE da armadura caida.\n");
         } else {
-            printf("\nVoce deixa o cristal intacto.\n");
-            printf("As armaduras te guiam ate a armadura caida.\n");
-            printf("Uma voz sussurra: 'Obrigada por nos deixar existir...'\n");
-            printf("Voce pega a CHAVE.\n");
+            printw("\nVoce deixa o cristal intacto.\n");
+            printw("As armaduras te guiam ate a armadura caida.\n");
+            printw("Uma voz sussurra: 'Obrigada por nos deixar existir...'\n");
+            printw("Voce pega a CHAVE.\n");
             // Bonus de empatia
-            if (strcmp(rotaEscolhida, "Floresta") == 0) pontosCompaixao += 2;
-            else if (strcmp(rotaEscolhida, "Pantano") == 0) pontosAstúcia += 2;
-            else pontosSabedoria += 2;
+            if (strcmp(estado->rotaEscolhida, "Floresta") == 0) estado->pontosCompaixao += 2;
+            else if (strcmp(estado->rotaEscolhida, "Pantano") == 0) estado->pontosAstucia += 2;
+            else estado->pontosSabedoria += 2;
         }
     }
-    
+
     pausar();
-    printf("\n[CHAVE OBTIDA - Acesso a Sala do Tesouro]\n");
+    printw("\n[CHAVE OBTIDA - Acesso a Sala do Tesouro]\n");
     pausar();
 }
 
 // ---------- EVENTO 3: MIMICO E DIARIO ----------
 
-void eventoMimicoDiario() {
+void eventoMimicoDiario(GameState *estado) {
     int escolha;
-    
+
     limparTela();
-    printf("\n=== SALA DO TESOURO ===\n\n");
-    
-    printf("Voce abre a porta com a chave.\n");
-    printf("Uma sala cheia de BAUS dourados!\n");
-    printf("De repente, um deles... ABRE A BOCA!\n");
-    printf("E um MIMICO!\n\n");
+    printw("\n=== SALA DO TESOURO ===\n\n");
+
+    printw("Voce abre a porta com a chave.\n");
+    printw("Uma sala cheia de BAUS dourados!\n");
+    printw("De repente, um deles... ABRE A BOCA!\n");
+    printw("E um MIMICO!\n\n");
     pausar();
-    
-    printf("Mimico: 'Espera! Nao vou te atacar!'\n");
-    printf("'Estou cansado disso... so quero conversar.'\n");
-    printf("'Tenho algo que voce quer... um DIARIO.'\n\n");
-    
-    printf("O que voce faz?\n");
-    printf("1 - Desconfiar (cautela)\n");
-    printf("2 - Aceitar conversar (abertura)\n");
-    printf("3 - Oferecer algo primeiro (bondade)\n");
-    printf("Escolha: ");
-    scanf("%d", &escolha);
-    
+
+    printw("Mimico: 'Espera! Nao vou te atacar!'\n");
+    printw("'Estou cansado disso... so quero conversar.'\n");
+    printw("'Tenho algo que voce quer... um DIARIO.'\n\n");
+
+    const char *opcoes[] = {
+        "Desconfiar (cautela)",
+        "Aceitar conversar (abertura)",
+        "Oferecer algo primeiro (bondade)"
+    };
+    escolha = apresentarMenu("O que voce faz?", opcoes, 3);
+
     if (escolha == 1) {
         // DESCONFIAR
-        printf("\nVoce: 'Mimicos nao falam... o que voce quer?'\n");
-        printf("Mimico: 'Esperto. Mas olha, nao quero lutar.'\n");
-        printf("'A bruxa me pediu para guardar um diario.'\n");
-        printf("'Posso te dar... em troca de algo.'\n\n");
-        printf("Voce oferece comida da mochila.\n");
-        printf("Mimico: 'Obrigado... ha anos nao como.'\n");
-        printf("Ele te entrega o DIARIO.\n");
-        
+        printw("\nVoce: 'Mimicos nao falam... o que voce quer?'\n");
+        printw("Mimico: 'Esperto. Mas olha, nao quero lutar.'\n");
+        printw("'A bruxa me pediu para guardar um diario.'\n");
+        printw("'Posso te dar... em troca de algo.'\n\n");
+        printw("Voce oferece comida da mochila.\n");
+        printw("Mimico: 'Obrigado... ha anos nao como.'\n");
+        printw("Ele te entrega o DIARIO.\n");
+
     } else if (escolha == 2) {
         // CONVERSAR
-        printf("\nVoce: 'Tudo bem, vamos conversar.'\n");
-        printf("Mimico: 'Serio?! Ninguem nunca...'\n");
-        printf("Ele chora (mimicos tem sentimentos!).\n");
-        printf("Mimico: 'A bruxa me pediu pra guardar um diario.'\n");
-        printf("'Ela disse que era importante... sobre os herois.'\n");
-        printf("'Voce parece bom. Pegue.'\n");
-        printf("Ele te entrega o DIARIO gratuitamente.\n");
+        printw("\nVoce: 'Tudo bem, vamos conversar.'\n");
+        printw("Mimico: 'Serio?! Ninguem nunca...'\n");
+        printw("Ele chora (mimicos tem sentimentos!).\n");
+        printw("Mimico: 'A bruxa me pediu pra guardar um diario.'\n");
+        printw("'Ela disse que era importante... sobre os herois.'\n");
+        printw("'Voce parece bom. Pegue.'\n");
+        printw("Ele te entrega o DIARIO gratuitamente.\n");
         // Bonus de empatia
-        if (strcmp(rotaEscolhida, "Floresta") == 0) pontosCompaixao += 2;
-        else if (strcmp(rotaEscolhida, "Pantano") == 0) pontosAstúcia += 2;
-        else pontosSabedoria += 2;
-        
+        if (strcmp(estado->rotaEscolhida, "Floresta") == 0) estado->pontosCompaixao += 2;
+        else if (strcmp(estado->rotaEscolhida, "Pantano") == 0) estado->pontosAstucia += 2;
+        else estado->pontosSabedoria += 2;
+
     } else {
         // OFERECER
-        printf("\nVoce: 'Tenho algo para voce.'\n");
-        printf("Voce oferece comida da mochila.\n");
-        printf("Mimico: 'Voce... nao vai me atacar?'\n");
-        printf("Ele CHORA copiosamente.\n");
-        printf("Mimico: 'Obrigado... obrigado...'\n");
-        printf("Ele te entrega o DIARIO e um TESOURO extra.\n");
-        printf("[BONUS: Item raro obtido!]\n");
+        printw("\nVoce: 'Tenho algo para voce.'\n");
+        printw("Voce oferece comida da mochila.\n");
+        printw("Mimico: 'Voce... nao vai me atacar?'\n");
+        printw("Ele CHORA copiosamente.\n");
+        printw("Mimico: 'Obrigado... obrigado...'\n");
+        printw("Ele te entrega o DIARIO e um TESOURO extra.\n");
+        printw("[BONUS: Item raro obtido!]\n");
         // Bonus maximo
-        if (strcmp(rotaEscolhida, "Floresta") == 0) pontosCompaixao += 3;
-        else if (strcmp(rotaEscolhida, "Pantano") == 0) pontosAstúcia += 3;
-        else pontosSabedoria += 3;
+        if (strcmp(estado->rotaEscolhida, "Floresta") == 0) estado->pontosCompaixao += 3;
+        else if (strcmp(estado->rotaEscolhida, "Pantano") == 0) estado->pontosAstucia += 3;
+        else estado->pontosSabedoria += 3;
     }
-    
+
     pausar();
     limparTela();
-    
+
     // LEITURA DO DIARIO
-    printf("\n========================================\n");
-    printf("           DIARIO DOS HEROIS\n");
-    printf("       Compilado por Animata\n");
-    printf("========================================\n\n");
+    printw("\n========================================\n");
+    printw("           DIARIO DOS HEROIS\n");
+    printw("       Compilado por Animata\n");
+    printw("========================================\n\n");
     pausar();
-    
-    printf("--- Entrada de Egnar (Anao Ferreiro) ---\n\n");
-    printf("'Damian me deu proposito. Antes, eu apenas existia.'\n");
-    printf("'Forjar para ele... tinha significado.'\n");
-    printf("'Mas quando ele se foi, eu continuei forjando...'\n");
-    printf("'Por que? Porque aprendi que o proposito e viver.'\n");
-    printf("'Nao importa para quem, mas viver tem valor.'\n\n");
+
+    printw("--- Entrada de Egnar (Anao Ferreiro) ---\n\n");
+    printw("'Damian me deu proposito. Antes, eu apenas existia.'\n");
+    printw("'Forjar para ele... tinha significado.'\n");
+    printw("'Mas quando ele se foi, eu continuei forjando...'\n");
+    printw("'Por que? Porque aprendi que o proposito e viver.'\n");
+    printw("'Nao importa para quem, mas viver tem valor.'\n\n");
     pausar();
-    
-    printf("--- Entrada de Glacify (Elfa Negra) ---\n\n");
-    printf("'Eu tinha medo de tudo. De errar, de machucar, de falhar.'\n");
-    printf("'Damian me disse: Voce ja falhou ao nao tentar.'\n");
-    printf("'Na ultima batalha, eu tentei. Falhei. Ele morreu.'\n");
-    printf("'Mas nao me arrependo de ter tentado.'\n");
-    printf("'Ele sorriu para mim no final.'\n\n");
+
+    printw("--- Entrada de Glacify (Elfa Negra) ---\n\n");
+    printw("'Eu tinha medo de tudo. De errar, de machucar, de falhar.'\n");
+    printw("'Damian me disse: Voce ja falhou ao nao tentar.'\n");
+    printw("'Na ultima batalha, eu tentei. Falhei. Ele morreu.'\n");
+    printw("'Mas nao me arrependo de ter tentado.'\n");
+    printw("'Ele sorriu para mim no final.'\n\n");
     pausar();
-    
-    printf("--- Entrada de Fulzard (Lagarto Guerreiro) ---\n\n");
-    printf("'Nunca liguei pra nada. Para que? Doi.'\n");
-    printf("'Damian me obrigou a ligar. Odiei ele por isso.'\n");
-    printf("'Depois amei. Depois sofri quando ele partiu.'\n");
-    printf("'Mas eu nao trocaria. A dor prova que eu vivi.'\n");
-    printf("'A dor prova que eu amei.'\n\n");
+
+    printw("--- Entrada de Fulzard (Lagarto Guerreiro) ---\n\n");
+    printw("'Nunca liguei pra nada. Para que? Doi.'\n");
+    printw("'Damian me obrigou a ligar. Odiei ele por isso.'\n");
+    printw("'Depois amei. Depois sofri quando ele partiu.'\n");
+    printw("'Mas eu nao trocaria. A dor prova que eu vivi.'\n");
+    printw("'A dor prova que eu amei.'\n\n");
     pausar();
-    
-    printf("--- Entrada sobre Damian (por Animata) ---\n\n");
-    printf("'Ele sempre ajudou. Nunca pediu ajuda.'\n");
-    printf("'Eu perguntei: Por que voce se sacrificou?'\n");
-    printf("'Ele nao respondeu. Apenas sorriu.'\n");
-    printf("'Eu acho que... ele estava cansado.'\n");
-    printf("'Cansado de ser o forte. O sabio. O heroi.'\n");
-    printf("'Ele queria descansar. Mas EU nao deixei.'\n\n");
+
+    printw("--- Entrada sobre Damian (por Animata) ---\n\n");
+    printw("'Ele sempre ajudou. Nunca pediu ajuda.'\n");
+    printw("'Eu perguntei: Por que voce se sacrificou?'\n");
+    printw("'Ele nao respondeu. Apenas sorriu.'\n");
+    printw("'Eu acho que... ele estava cansado.'\n");
+    printw("'Cansado de ser o forte. O sabio. O heroi.'\n");
+    printw("'Ele queria descansar. Mas EU nao deixei.'\n\n");
     pausar();
-    
-    printf("--- Entrada OCULTA (pagina rasgada) ---\n\n");
-    printf("'Eu matei minha mae.'\n");
-    printf("'Eu nao sabia. Mas isso importa?'\n");
-    printf("'Ela veio me procurar. Anos procurando.'\n");
-    printf("'E eu... eu a matei.'\n");
-    printf("'Suas ultimas palavras: Meu filho... finalmente.'\n");
-    printf("'Como eu vivo com isso?'\n\n");
+
+    printw("--- Entrada OCULTA (pagina rasgada) ---\n\n");
+    printw("'Eu matei minha mae.'\n");
+    printw("'Eu nao sabia. Mas isso importa?'\n");
+    printw("'Ela veio me procurar. Anos procurando.'\n");
+    printw("'E eu... eu a matei.'\n");
+    printw("'Suas ultimas palavras: Meu filho... finalmente.'\n");
+    printw("'Como eu vivo com isso?'\n\n");
     pausar();
-    
-    printf("--- Ultima entrada de Animata ---\n\n");
-    printf("'Roubei o amuleto. Tentei revive-lo.'\n");
-    printf("'Nao funcionou. Ele nao voltou.'\n");
-    printf("'Talvez... ele nao QUEIRA voltar.'\n");
-    printf("'Talvez eu seja egoista.'\n");
-    printf("'Talvez eu o ame tanto que o prendi aqui.'\n");
-    printf("'Se alguem ler isso... pare-me.'\n");
-    printf("'Ou me deixe com ele para sempre.'\n\n");
+
+    printw("--- Ultima entrada de Animata ---\n\n");
+    printw("'Roubei o amuleto. Tentei revive-lo.'\n");
+    printw("'Nao funcionou. Ele nao voltou.'\n");
+    printw("'Talvez... ele nao QUEIRA voltar.'\n");
+    printw("'Talvez eu seja egoista.'\n");
+    printw("'Talvez eu o ame tanto que o prendi aqui.'\n");
+    printw("'Se alguem ler isso... pare-me.'\n");
+    printw("'Ou me deixe com ele para sempre.'\n\n");
     pausar();
-    
-    printf("========================================\n");
-    printf("         FIM DO DIARIO\n");
-    printf("========================================\n\n");
-    
-    printf("Voce fecha o diario, entendendo tudo agora...\n");
+
+    printw("========================================\n");
+    printw("         FIM DO DIARIO\n");
+    printw("========================================\n\n");
+
+    printw("Voce fecha o diario, entendendo tudo agora...\n");
     pausar();
 }
 
 // ---------- CONFRONTO FINAL ----------
 
-void confrontoFinalAnimata() {
+void confrontoFinalAnimata(GameState *estado) {
     int escolhaFinal;
-    
+
+    exibirAsciiArt(CONFRONTO_FINAL);
+    pausar();
+
     limparTela();
-    printf("\n========================================\n");
-    printf("         SALAO DO TRONO\n");
-    printf("========================================\n\n");
-    
-    printf("Voce abre a ultima porta...\n");
-    printf("O salao e imenso, sombrio.\n\n");
-    printf("No centro: um ESQUELETO GIGANTE de dragao.\n");
-    printf("Ao lado: ANIMATA, abraçada ao amuleto.\n");
-    printf("Ao redor: os fantasmas de Egnar, Glacify e Fulzard, presos.\n\n");
+    printw("\n========================================\n");
+    printw("         SALAO DO TRONO\n");
+    printw("========================================\n\n");
+
+    printw("Voce abre a ultima porta...\n");
+    printw("O salao e imenso, sombrio.\n\n");
+    printw("No centro: um ESQUELETO GIGANTE de dragao.\n");
+    printw("Ao lado: ANIMATA, abraçada ao amuleto.\n");
+    printw("Ao redor: os fantasmas de Egnar, Glacify e Fulzard, presos.\n\n");
     pausar();
-    
-    printf("Animata levanta a cabeca: 'Voce veio... como todos pedem.'\n");
-    printf("'Salve-nos, heroi. Sempre a mesma historia.'\n");
-    printf("Ela ri amargamente.\n\n");
+
+    printw("Animata levanta a cabeca: 'Voce veio... como todos pedem.'\n");
+    printw("'Salve-nos, heroi. Sempre a mesma historia.'\n");
+    printw("Ela ri amargamente.\n\n");
     pausar();
-    
-    printf("Os fantasmas falam:\n");
-    printf("Egnar: 'Deixe-nos ir, Animata... por favor.'\n");
-    printf("Glacify: 'Voce nao esta errando por tentar... esta errando por nao parar.'\n");
-    printf("Fulzard: 'Doi, eu sei. Mas prender a gente doi mais.'\n\n");
+
+    printw("Os fantasmas falam:\n");
+    printw("Egnar: 'Deixe-nos ir, Animata... por favor.'\n");
+    printw("Glacify: 'Voce nao esta errando por tentar... esta errando por nao parar.'\n");
+    printw("Fulzard: 'Doi, eu sei. Mas prender a gente doi mais.'\n\n");
     pausar();
-    
-    printf("Animata: 'CALEM-SE! Voces nao entendem!'\n");
-    printf("'Sem ele, sem VOCES... eu nao sou nada!'\n\n");
+
+    printw("Animata: 'CALEM-SE! Voces nao entendem!'\n");
+    printw("'Sem ele, sem VOCES... eu nao sou nada!'\n\n");
     pausar();
-    
+
     // ESCOLHA FINAL
-    printf("\n========================================\n");
-    printf("           ESCOLHA FINAL\n");
-    printf("========================================\n\n");
-    
-    printf("O que voce faz?\n");
-    printf("1 - Combater Animata (forca)\n");
-    printf("2 - Conversar com ela (empatia)\n");
-    printf("3 - Usar a Escama do Dragao (se tiver)\n");
-    printf("Escolha: ");
-    scanf("%d", &escolhaFinal);
-    
+    const char *opcoes[] = {
+        "Combater Animata (forca)",
+        "Conversar com ela (empatia)",
+        "Usar a Escama do Dragao (se tiver)"
+    };
+    escolhaFinal = apresentarMenu("O que voce faz?", opcoes, 3);
+
     if (escolhaFinal == 1) {
         // FINAL A: COMBATE
         limparTela();
-        printf("\n=== FINAL: LIBERTACAO FORCADA ===\n\n");
-        printf("Voce desembanha sua espada.\n");
-        printf("Animata: 'Entao e isso? Violencia? Igual a todos?'\n\n");
-        printf("Voce a derrota em combate magico intenso.\n");
-        printf("O amuleto se QUEBRA.\n");
-        printf("Os fantasmas sao libertos... mas Animata cai, chorando.\n\n");
+        printw("\n=== FINAL: LIBERTACAO FORCADA ===\n\n");
+        printw("Voce desembanha sua espada.\n");
+        printw("Animata: 'Entao e isso? Violencia? Igual a todos?'\n\n");
+        printw("Voce a derrota em combate magico intenso.\n");
+        printw("O amuleto se QUEBRA.\n");
+        printw("Os fantasmas sao libertos... mas Animata cai, chorando.\n\n");
         pausar();
-        
-        printf("Animata: 'Voce salvou todos... exceto eu...'\n");
-        printf("Ela desaparece nas sombras, sozinha e amarga.\n\n");
-        printf("Kenshi: 'O amuleto foi destruido... mas a que custo?'\n");
-        printf("'As vezes, a forca nao e a resposta.'\n\n");
-        
+
+        printw("Animata: 'Voce salvou todos... exceto eu...'\n");
+        printw("Ela desaparece nas sombras, sozinha e amarga.\n\n");
+        printw("Kenshi: 'O amuleto foi destruido... mas a que custo?'\n");
+        printw("'As vezes, a forca nao e a resposta.'\n\n");
+
     } else if (escolhaFinal == 2) {
         // FINAL B: CONVERSA
         limparTela();
-        printf("\n=== FINAL: REDENCAO ===\n\n");
-        printf("Voce guarda sua espada.\n");
-        printf("Voce: 'Posso entender voce?'\n");
-        printf("Animata para, surpresa: 'Voce... nao vai me atacar?'\n\n");
+        printw("\n=== FINAL: REDENCAO ===\n\n");
+        printw("Voce guarda sua espada.\n");
+        printw("Voce: 'Posso entender voce?'\n");
+        printw("Animata para, surpresa: 'Voce... nao vai me atacar?'\n\n");
         pausar();
-        
-        printf("Voce: 'Li o diario. Voce o amava.'\n");
-        printf("Animata chora: 'Eu... eu ajudei a matar a mae dele...'\n");
-        printf("Voce: 'Voce nao sabia. Ele tambem nao.'\n\n");
+
+        printw("Voce: 'Li o diario. Voce o amava.'\n");
+        printw("Animata chora: 'Eu... eu ajudei a matar a mae dele...'\n");
+        printw("Voce: 'Voce nao sabia. Ele tambem nao.'\n\n");
         pausar();
-        
+
         // Calcula se teve boas escolhas
-        int pontosTotal = pontosCompaixao + pontosAstúcia + pontosSabedoria;
-        
+        int pontosTotal = estado->pontosCompaixao + estado->pontosAstucia + estado->pontosSabedoria;
+
         if (pontosTotal >= 20) {
             // FINAL B1 - REDENCAO COMPLETA
-            printf("Voce: 'Voce pode deixa-los ir. Ainda ha tempo.'\n");
-            printf("Animata chora copiosamente.\n");
-            printf("Ela abraca o amuleto uma ultima vez...\n");
-            printf("E o LIBERTA.\n\n");
+            printw("Voce: 'Voce pode deixa-los ir. Ainda ha tempo.'\n");
+            printw("Animata chora copiosamente.\n");
+            printw("Ela abraca o amuleto uma ultima vez...\n");
+            printw("E o LIBERTA.\n\n");
             pausar();
-            
-            printf("Os fantasmas a abraçam antes de partir.\n");
-            printf("Damian aparece por ultimo: 'Obrigado... por tudo.'\n");
-            printf("Animata: 'Me perdoa?'\n");
-            printf("Damian: 'Sempre perdoei. Agora perdoe-se.'\n\n");
-            printf("Todos partem em paz.\n");
-            printf("Animata vive, se torna guardia do castelo.\n");
-            printf("'Vou honrar a memoria deles... do jeito certo.'\n\n");
-            
+
+            printw("Os fantasmas a abraçam antes de partir.\n");
+            printw("Damian aparece por ultimo: 'Obrigado... por tudo.'\n");
+            printw("Animata: 'Me perdoa?'\n");
+            printw("Damian: 'Sempre perdoei. Agora perdoe-se.'\n\n");
+            printw("Todos partem em paz.\n");
+            printw("Animata vive, se torna guardia do castelo.\n");
+            printw("'Vou honrar a memoria deles... do jeito certo.'\n\n");
+
         } else {
             // FINAL B2 - ACEITACAO PARCIAL
-            printf("Voce: 'Deixe-os ir... por favor.'\n");
-            printf("Animata: 'Eu... ainda nao estou pronta...'\n");
-            printf("Ela liberta Egnar, Glacify e Fulzard.\n");
-            printf("Mas mantem Damian um pouco mais.\n\n");
-            printf("Damian: 'Tudo bem... estarei aqui ate voce estiver pronta.'\n");
-            printf("Nao e perfeito... mas e um começo.\n\n");
+            printw("Voce: 'Deixe-os ir... por favor.'\n");
+            printw("Animata: 'Eu... ainda nao estou pronta...'\n");
+            printw("Ela liberta Egnar, Glacify e Fulzard.\n");
+            printw("Mas mantem Damian um pouco mais.\n\n");
+            printw("Damian: 'Tudo bem... estarei aqui ate voce estiver pronta.'\n");
+            printw("Nao e perfeito... mas e um começo.\n\n");
         }
-        
-    } else if (escolhaFinal == 3 && temEscamaDragao == 1) {
+
+    } else if (escolhaFinal == 3 && estado->temEscamaDragao == 1) {
         // FINAL C - ESCAMA DO DRAGAO (FINAL SECRETO)
         limparTela();
-        printf("\n=== FINAL SECRETO: PAZ COMPLETA ===\n\n");
-        printf("Voce: 'Tenho algo para voce.'\n");
-        printf("Voce mostra a ESCAMA DOURADA.\n");
-        printf("Animata: 'Isso e... da dragoa?'\n\n");
+        printw("\n=== FINAL SECRETO: PAZ COMPLETA ===\n\n");
+        printw("Voce: 'Tenho algo para voce.'\n");
+        printw("Voce mostra a ESCAMA DOURADA.\n");
+        printw("Animata: 'Isso e... da dragoa?'\n\n");
         pausar();
-        
-        printf("Voce: 'Drake me deu. Era da mae de Damian.'\n");
-        printf("Animata pega a escama, tremendo.\n\n");
-        printf("Voce coloca a escama no esqueleto do dragao.\n");
-        printf("MAGIA ACONTECE!\n\n");
+
+        printw("Voce: 'Drake me deu. Era da mae de Damian.'\n");
+        printw("Animata pega a escama, tremendo.\n\n");
+        printw("Voce coloca a escama no esqueleto do dragao.\n");
+        printw("MAGIA ACONTECE!\n\n");
         pausar();
-        
-        printf("O esqueleto BRILHA!\n");
-        printf("Uma forma espectral aparece: a DRAGOA ANCIA!\n\n");
-        printf("Dragoa: 'Voce ama meu filho.'\n");
-        printf("Animata chora: 'Eu... eu ajudei a matar voce!'\n");
-        printf("Dragoa: 'Eu sei. Mas voce tambem o amou quando ninguem mais conseguia.'\n\n");
+
+        printw("O esqueleto BRILHA!\n");
+        printw("Uma forma espectral aparece: a DRAGOA ANCIA!\n\n");
+        printw("Dragoa: 'Voce ama meu filho.'\n");
+        printw("Animata chora: 'Eu... eu ajudei a matar voce!'\n");
+        printw("Dragoa: 'Eu sei. Mas voce tambem o amou quando ninguem mais conseguia.'\n\n");
         pausar();
-        
-        printf("A dragoa toca o amuleto.\n");
-        printf("Ele se TRANSFORMA!\n");
-        printf("Nao e mais prisao... e MEMORIA.\n\n");
-        printf("Os fantasmas sao libertos, mas suas lembrancas permanecem.\n");
-        printf("Damian aparece e abraça a mae e Animata.\n");
-        printf("Todos partem juntos, em paz.\n\n");
+
+        printw("A dragoa toca o amuleto.\n");
+        printw("Ele se TRANSFORMA!\n");
+        printw("Nao e mais prisao... e MEMORIA.\n\n");
+        printw("Os fantasmas sao libertos, mas suas lembrancas permanecem.\n");
+        printw("Damian aparece e abraça a mae e Animata.\n");
+        printw("Todos partem juntos, em paz.\n\n");
         pausar();
-        
-        printf("Animata fica com o amuleto transformado.\n");
-        printf("Ela se torna Guardia da Memoria.\n");
-        printf("'Vou proteger o legado deles... nao suas almas.'\n\n");
-        
-        if (dragaoFilhoteSalvo == 1) {
-            printf("De repente... o DRAGAO FILHOTE aparece, agora ADULTO!\n");
-            printf("Ele cresceu rapido e lembrou de voce!\n");
-            printf("Dragao: 'Voce me salvou... agora protegerei esta guardia.'\n");
-            printf("Ele fica com Animata.\n");
-            printf("'Ele e tudo que restou da mae de Damian. Vou protege-lo.'\n\n");
+
+        printw("Animata fica com o amuleto transformado.\n");
+        printw("Ela se torna Guardia da Memoria.\n");
+        printw("'Vou proteger o legado deles... nao suas almas.'\n\n");
+
+        if (estado->dragaoFilhoteSalvo == 1) {
+            printw("De repente... o DRAGAO FILHOTE aparece, agora ADULTO!\n");
+            printw("Ele cresceu rapido e lembrou de voce!\n");
+            printw("Dragao: 'Voce me salvou... agora protegerei esta guardia.'\n");
+            printw("Ele fica com Animata.\n");
+            printw("'Ele e tudo que restou da mae de Damian. Vou protege-lo.'\n\n");
         }
-        
-        printf("O esqueleto e enterrado com honras.\n");
-        printf("A paz finalmente reina.\n\n");
-        
+
+        printw("O esqueleto e enterrado com honras.\n");
+        printw("A paz finalmente reina.\n\n");
+
     } else {
         // Caso escolha 3 mas nao tenha a escama
-        printf("\nVoce nao tem a Escama do Dragao...\n");
-        printf("Voltando as opcoes anteriores.\n");
+        printw("\nVoce nao tem a Escama do Dragao...\n");
+        printw("Voltando as opcoes anteriores.\n");
         pausar();
-        confrontoFinalAnimata();  // Chama de novo
+        confrontoFinalAnimata(estado);  // Chama de novo
         return;
     }
-    
+
     pausar();
-    calcularRanking();  // Vai para o ranking final
+    calcularRanking(estado);  // Vai para o ranking final
 }
 
 // ========== RANKING FINAL ==========
 
-void calcularRanking() {
-    int pontosTotal = pontosCompaixao + pontosAstúcia + pontosSabedoria;
-    
+void calcularRanking(GameState *estado) {
+    int pontosTotal = estado->pontosCompaixao + estado->pontosAstucia + estado->pontosSabedoria;
+
     limparTela();
-    printf("\n========================================\n");
-    printf("           RANKING FINAL\n");
-    printf("========================================\n\n");
-    
-    printf("--- PONTUACAO ---\n");
-    printf("Compaixao: %d pontos\n", pontosCompaixao);
-    printf("Astucia: %d pontos\n", pontosAstúcia);
-    printf("Sabedoria: %d pontos\n", pontosSabedoria);
-    printf("\nTOTAL: %d pontos\n\n", pontosTotal);
+    printw("\n========================================\n");
+    printw("           RANKING FINAL\n");
+    printw("========================================\n\n");
+
+    printw("--- PONTUACAO ---\n");
+    printw("Compaixao: %d pontos\n", estado->pontosCompaixao);
+    printw("Astucia: %d pontos\n", estado->pontosAstucia);
+    printw("Sabedoria: %d pontos\n", estado->pontosSabedoria);
+    printw("\nTOTAL: %d pontos\n\n", pontosTotal);
     pausar();
-    
+
     // RANKING BASEADO NOS PONTOS
-    printf("\n--- SEU RANK ---\n\n");
-    
+    printw("\n--- SEU RANK ---\n\n");
+
     if (pontosTotal >= 40) {
-        printf("****************************************\n");
-        printf("     RANK S - HEROI LENDARIO\n");
-        printf("****************************************\n\n");
-        printf("Voce nao apenas completou a missao.\n");
-        printf("Voce trouxe PAZ, JUSTICA e REDENCAO.\n");
-        printf("Sua jornada sera contada por geracoes.\n");
-        printf("Pessoas nao falam apenas de suas vitorias...\n");
-        printf("Mas de seu CORACAO.\n\n");
-        
+        printw("****************************************\n");
+        printw("     RANK S - HEROI LENDARIO\n");
+        printw("****************************************\n\n");
+        printw("Voce nao apenas completou a missao.\n");
+        printw("Voce trouxe PAZ, JUSTICA e REDENCAO.\n");
+        printw("Sua jornada sera contada por geracoes.\n");
+        printw("Pessoas nao falam apenas de suas vitorias...\n");
+        printw("Mas de seu CORACAO.\n\n");
+
     } else if (pontosTotal >= 30) {
-        printf("****************************************\n");
-        printf("     RANK A - HEROI VERDADEIRO\n");
-        printf("****************************************\n\n");
-        printf("Voce fez escolhas dificeis com sabedoria.\n");
-        printf("Nem sempre perfeito, mas sempre tentando.\n");
-        printf("Voce salvou vidas e almas.\n");
-        printf("O reino te agradece.\n\n");
-        
+        printw("****************************************\n");
+        printw("     RANK A - HEROI VERDADEIRO\n");
+        printw("****************************************\n\n");
+        printw("Voce fez escolhas dificeis com sabedoria.\n");
+        printw("Nem sempre perfeito, mas sempre tentando.\n");
+        printw("Voce salvou vidas e almas.\n");
+        printw("O reino te agradece.\n\n");
+
     } else if (pontosTotal >= 20) {
-        printf("****************************************\n");
-        printf("     RANK B - AVENTUREIRO CAPAZ\n");
-        printf("****************************************\n\n");
-        printf("Voce completou a missao.\n");
-        printf("Nem heroi, nem vilao. Apenas humano.\n");
-        printf("Suas escolhas foram praticas.\n");
-        printf("Fez o necessario.\n\n");
-        
+        printw("****************************************\n");
+        printw("     RANK B - AVENTUREIRO CAPAZ\n");
+        printw("****************************************\n\n");
+        printw("Voce completou a missao.\n");
+        printw("Nem heroi, nem vilao. Apenas humano.\n");
+        printw("Suas escolhas foram praticas.\n");
+        printw("Fez o necessario.\n\n");
+
     } else if (pontosTotal >= 10) {
-        printf("****************************************\n");
-        printf("     RANK C - SOBREVIVENTE\n");
-        printf("****************************************\n\n");
-        printf("Voce sobreviveu... mas a que custo?\n");
-        printf("Muitas escolhas dificeis.\n");
-        printf("Talvez pudesse ter feito melhor.\n");
-        printf("Mas voce chegou ate o fim.\n\n");
-        
+        printw("****************************************\n");
+        printw("     RANK C - SOBREVIVENTE\n");
+        printw("****************************************\n\n");
+        printw("Voce sobreviveu... mas a que custo?\n");
+        printw("Muitas escolhas dificeis.\n");
+        printw("Talvez pudesse ter feito melhor.\n");
+        printw("Mas voce chegou ate o fim.\n\n");
+
     } else {
-        printf("****************************************\n");
-        printf("     RANK D - CAMINHO SOMBRIO\n");
-        printf("****************************************\n\n");
-        printf("Voce completou a missao... tecnicamente.\n");
-        printf("Mas deixou muita dor pelo caminho.\n");
-        printf("A violencia foi sua primeira escolha.\n");
-        printf("Talvez precise refletir sobre suas acoes.\n\n");
+        printw("****************************************\n");
+        printw("     RANK D - CAMINHO SOMBRIO\n");
+        printw("****************************************\n\n");
+        printw("Voce completou a missao... tecnicamente.\n");
+        printw("Mas deixou muita dor pelo caminho.\n");
+        printw("A violencia foi sua primeira escolha.\n");
+        printw("Talvez precise refletir sobre suas acoes.\n\n");
     }
-    
+
     pausar();
-    
+
     // MENSAGEM ESPECIAL POR ROTA
-    printf("\n--- MENSAGEM DA SUA ROTA ---\n\n");
-    
-    if (strcmp(rotaEscolhida, "Floresta") == 0) {
-        if (pontosCompaixao >= 15) {
-            printf("A Ninfa da Floresta sorri:\n");
-            printf("'Voce provou que a compaixao nao e fraqueza.'\n");
-            printf("'E a maior forca que existe.'\n");
+    printw("\n--- MENSAGEM DA SUA ROTA ---\n\n");
+
+    if (strcmp(estado->rotaEscolhida, "Floresta") == 0) {
+        if (estado->pontosCompaixao >= 15) {
+            printw("A Ninfa da Floresta sorri:\n");
+            printw("'Voce provou que a compaixao nao e fraqueza.'\n");
+            printw("'E a maior forca que existe.'\n");
         } else {
-            printf("A Ninfa da Floresta suspira:\n");
-            printf("'Voce passou pela floresta, mas nao aprendeu com ela.'\n");
-            printf("'A natureza perdoa... mas nao esquece.'\n");
+            printw("A Ninfa da Floresta suspira:\n");
+            printw("'Voce passou pela floresta, mas nao aprendeu com ela.'\n");
+            printw("'A natureza perdoa... mas nao esquece.'\n");
         }
-        
-    } else if (strcmp(rotaEscolhida, "Pantano") == 0) {
-        if (pontosAstúcia >= 15) {
-            printf("A Cobra do Pantano assobia:\n");
-            printf("'Voce e cacador, nao pressssa.'\n");
-            printf("'Pensssa antes de agir. Isso e ssssabedoria.'\n");
+
+    } else if (strcmp(estado->rotaEscolhida, "Pantano") == 0) {
+        if (estado->pontosAstucia >= 15) {
+            printw("A Cobra do Pantano assobia:\n");
+            printw("'Voce e cacador, nao pressssa.'\n");
+            printw("'Pensssa antes de agir. Isso e ssssabedoria.'\n");
         } else {
-            printf("A Cobra do Pantano balanca a cabeca:\n");
-            printf("'Voce tropecou em muitas armadilhas.'\n");
-            printf("'No pantano, quem nao pensa... afunda.'\n");
+            printw("A Cobra do Pantano balanca a cabeca:\n");
+            printw("'Voce tropecou em muitas armadilhas.'\n");
+            printw("'No pantano, quem nao pensa... afunda.'\n");
         }
-        
+
     } else {
-        if (pontosSabedoria >= 15) {
-            printf("O Drake Anciao te olha com respeito:\n");
-            printf("'Voce nao e como os outros.'\n");
-            printf("'Voce ESCUTA. Voce APRENDE.'\n");
-            printf("'Isso e verdadeira sabedoria.'\n");
+        if (estado->pontosSabedoria >= 15) {
+            printw("O Drake Anciao te olha com respeito:\n");
+            printw("'Voce nao e como os outros.'\n");
+            printw("'Voce ESCUTA. Voce APRENDE.'\n");
+            printw("'Isso e verdadeira sabedoria.'\n");
         } else {
-            printf("O Drake Anciao franze o rosto:\n");
-            printf("'Voce tem forca... mas falta sabedoria.'\n");
-            printf("'Forcasem sabedoria e destruicao.'\n");
+            printw("O Drake Anciao franze o rosto:\n");
+            printw("'Voce tem forca... mas falta sabedoria.'\n");
+            printw("'Forcasem sabedoria e destruicao.'\n");
         }
     }
-    
+
     pausar();
-    
+
     // EPILOGO
-    printf("\n========================================\n");
-    printf("              EPILOGO\n");
-    printf("========================================\n\n");
-    
-    printf("Voce retorna a vila.\n");
-    printf("Kenshi te abraca, chorando de alivio.\n");
-    printf("'Voce conseguiu... obrigado.'\n\n");
-    
+    printw("\n========================================\n");
+    printw("              EPILOGO\n");
+    printw("========================================\n\n");
+
+    printw("Voce retorna a vila.\n");
+    printw("Kenshi te abraca, chorando de alivio.\n");
+    printw("'Voce conseguiu... obrigado.'\n\n");
+
     if (pontosTotal >= 30) {
-        printf("A vila celebra seu retorno com uma festa.\n");
-        printf("Criancas correm ate voce pedindo para ouvir suas historias.\n");
-        printf("Voce se tornou LENDA.\n\n");
+        printw("A vila celebra seu retorno com uma festa.\n");
+        printw("Criancas correm ate voce pedindo para ouvir suas historias.\n");
+        printw("Voce se tornou LENDA.\n\n");
     } else if (pontosTotal >= 15) {
-        printf("A vila comemora discretamente.\n");
-        printf("Voce fez o que era necessario.\n");
-        printf("Nao e heroi... mas fez a diferenca.\n\n");
+        printw("A vila comemora discretamente.\n");
+        printw("Voce fez o que era necessario.\n");
+        printw("Nao e heroi... mas fez a diferenca.\n\n");
     } else {
-        printf("A vila recebe voce em silencio.\n");
-        printf("A missao foi cumprida... mas algo parece vazio.\n");
-        printf("Voce olha para tras... e sente que perdeu algo.\n\n");
+        printw("A vila recebe voce em silencio.\n");
+        printw("A missao foi cumprida... mas algo parece vazio.\n");
+        printw("Voce olha para tras... e sente que perdeu algo.\n\n");
     }
-    
-    printf("========================================\n");
-    printf("            FIM DO JOGO\n");
-    printf("========================================\n\n");
-    printf("Obrigado por jogar!\n");
-    printf("Sua jornada termina aqui... ou comeca?\n\n");
-    
+
+    printw("========================================\n");
+    printw("            FIM DO JOGO\n");
+    printw("========================================\n\n");
+    printw("Obrigado por jogar!\n");
+    printw("Sua jornada termina aqui... ou comeca?\n\n");
+
     pausar();
 }
