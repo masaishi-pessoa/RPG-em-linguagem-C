@@ -265,6 +265,9 @@ void rotaFloresta(GameState *estado) {
 void eventoGoblinFada(GameState *estado) {
     int escolha1, escolha2;
 
+    exibirAsciiArt(GOBLIN_FADA);
+    pausar();
+
     limparTela();
     printw("\n=== EVENTO 1: ENCONTRO NA FLORESTA ===\n\n");
 
@@ -397,6 +400,9 @@ void eventoGoblinFada(GameState *estado) {
 
 void eventoElfaGlacify(GameState *estado) {
     int escolha1, escolha2;
+
+    exibirAsciiArt(ELFA_CACHOEIRA);
+    pausar();
 
     limparTela();
     printw("\n=== EVENTO 2: RIO E CACHOEIRA ===\n\n");
@@ -649,6 +655,9 @@ void rotaPantano(GameState *estado) {
 
 void eventoCelaBruxa(GameState *estado) {
     int escolha1, escolha2;
+
+    exibirAsciiArt(BRUXA);
+    pausar();
 
     limparTela();
     printw("\n=== EVENTO 1: RUINAS AMALDICOADAS ===\n\n");
@@ -1054,6 +1063,9 @@ void rotaCaverna(GameState *estado) {
 void eventoDragaoFilhote(GameState *estado) {
     int escolha1, escolha2;
 
+    exibirAsciiArt(DRAGAO_FILHOTE);
+    pausar();
+
     limparTela();
     printw("\n=== EVENTO 1: DRAGAO FAMINTO ===\n\n");
 
@@ -1222,6 +1234,9 @@ void eventoDragaoFilhote(GameState *estado) {
 
 void eventoAnaoEgnar(GameState *estado) {
     int escolha1, escolha2;
+
+    exibirAsciiArt(FERREIRO);
+    pausar();
 
     limparTela();
     printw("\n=== EVENTO 2: O FERREIRO FANTASMA ===\n\n");
@@ -1791,6 +1806,9 @@ void eventoMimicoDiario(GameState *estado) {
 
 void confrontoFinalAnimata(GameState *estado) {
     int escolhaFinal;
+
+    exibirAsciiArt(CONFRONTO_FINAL);
+    pausar();
 
     limparTela();
     printw("\n========================================\n");
