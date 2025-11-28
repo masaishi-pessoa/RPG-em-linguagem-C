@@ -152,7 +152,7 @@ void introducao() {
     
     printf("\"Preciso que voce recupere o amuleto e... talvez... salve ela.\"\n\n");
     printf("Kenshi te entrega uma mochila com suprimentos e uma espada.\n");
-    printf("Ele limpa uma lagrima: \"Se cuide... Estou contando com voce.\"\n\n");
+    printf("Ele enxuga as lagrimas: \"Se cuide... Estou contando com voce.\"\n\n");
     pausar();
     
     escolhaRota();
@@ -1652,7 +1652,7 @@ void eventoMimicoDiario() {
     } else if (escolha == 2) {
         // CONVERSAR
         printf("\nVoce: 'Tudo bem, vamos conversar.'\n");
-        printf("Mimico: 'Serio?! Ninguem nunca...'\n");
+        printf("Mimico: 'Serio?! Ninguem nunca quis conversar comigo...'\n");
         printf("Ele chora (mimicos tem sentimentos!).\n");
         printf("Mimico: 'A bruxa me pediu pra guardar um diario.'\n");
         printf("'Ela disse que era importante... sobre os herois.'\n");
@@ -1692,7 +1692,7 @@ void eventoMimicoDiario() {
     printf("'Damian me deu proposito. Antes, eu apenas existia.'\n");
     printf("'Forjar para ele... tinha significado.'\n");
     printf("'Mas quando ele se foi, eu continuei forjando...'\n");
-    printf("'Por que? Porque aprendi que o proposito e viver.'\n");
+    printf("'Por que? Porque aprendi que o proposito eh viver.'\n");
     printf("'Nao importa para quem, mas viver tem valor.'\n\n");
     pausar();
     
@@ -1708,7 +1708,7 @@ void eventoMimicoDiario() {
     printf("'Nunca liguei pra nada. Para que? Doi.'\n");
     printf("'Damian me obrigou a ligar. Odiei ele por isso.'\n");
     printf("'Depois amei. Depois sofri quando ele partiu.'\n");
-    printf("'Mas eu nao trocaria. A dor prova que eu vivi.'\n");
+    printf("'Mas eu nao trocaria. A dor prova de que eu vivi.'\n");
     printf("'A dor prova que eu amei.'\n\n");
     pausar();
     
@@ -1759,7 +1759,7 @@ void confrontoFinalAnimata() {
     printf("========================================\n\n");
     
     printf("Voce abre a ultima porta...\n");
-    printf("O salao e imenso, sombrio.\n\n");
+    printf("O salao eh imenso, sombrio.\n\n");
     printf("No centro: um ESQUELETO GIGANTE de dragao.\n");
     printf("Ao lado: ANIMATA, abraçada ao amuleto.\n");
     printf("Ao redor: os fantasmas de Egnar, Glacify e Fulzard, presos.\n\n");
@@ -1797,7 +1797,7 @@ void confrontoFinalAnimata() {
         limparTela();
         printf("\n=== FINAL: LIBERTACAO FORCADA ===\n\n");
         printf("Voce desembanha sua espada.\n");
-        printf("Animata: 'Entao e isso? Violencia? Igual a todos?'\n\n");
+        printf("Animata: 'Entao eh isso? Violencia? Igual a todos?'\n\n");
         printf("Voce a derrota em combate magico intenso.\n");
         printf("O amuleto se QUEBRA.\n");
         printf("Os fantasmas sao libertos... mas Animata cai, chorando.\n\n");
@@ -1806,7 +1806,7 @@ void confrontoFinalAnimata() {
         printf("Animata: 'Voce salvou todos... exceto eu...'\n");
         printf("Ela desaparece nas sombras, sozinha e amarga.\n\n");
         printf("Kenshi: 'O amuleto foi destruido... mas a que custo?'\n");
-        printf("'As vezes, a forca nao e a resposta.'\n\n");
+        printf("'As vezes, a forca nao eh a resposta.'\n\n");
         
     } else if (escolhaFinal == 2) {
         // FINAL B: CONVERSA
@@ -1848,7 +1848,7 @@ void confrontoFinalAnimata() {
             printf("Ela liberta Egnar, Glacify e Fulzard.\n");
             printf("Mas mantem Damian um pouco mais.\n\n");
             printf("Damian: 'Tudo bem... estarei aqui ate voce estiver pronta.'\n");
-            printf("Nao e perfeito... mas e um começo.\n\n");
+            printf("Nao eh perfeito... mas eh um começo.\n\n");
         }
         
     } else if (escolhaFinal == 3 && temEscamaDragao == 1) {
@@ -1857,7 +1857,7 @@ void confrontoFinalAnimata() {
         printf("\n=== FINAL SECRETO: PAZ COMPLETA ===\n\n");
         printf("Voce: 'Tenho algo para voce.'\n");
         printf("Voce mostra a ESCAMA DOURADA.\n");
-        printf("Animata: 'Isso e... da dragoa?'\n\n");
+        printf("Animata: 'Isso eh... da dragoa?'\n\n");
         pausar();
         
         printf("Voce: 'Drake me deu. Era da mae de Damian.'\n");
@@ -1875,7 +1875,7 @@ void confrontoFinalAnimata() {
         
         printf("A dragoa toca o amuleto.\n");
         printf("Ele se TRANSFORMA!\n");
-        printf("Nao e mais prisao... e MEMORIA.\n\n");
+        printf("Nao eh mais prisao... eh MEMORIA.\n\n");
         printf("Os fantasmas sao libertos, mas suas lembrancas permanecem.\n");
         printf("Damian aparece e abraça a mae e Animata.\n");
         printf("Todos partem juntos, em paz.\n\n");
@@ -1893,7 +1893,7 @@ void confrontoFinalAnimata() {
             printf("'Ele e tudo que restou da mae de Damian. Vou protege-lo.'\n\n");
         }
         
-        printf("O esqueleto e enterrado com honras.\n");
+        printf("O esqueleto eh enterrado com honras.\n");
         printf("A paz finalmente reina.\n\n");
         
     } else {
@@ -1984,7 +1984,7 @@ void calcularRanking() {
     if (strcmp(rotaEscolhida, "Floresta") == 0) {
         if (pontosCompaixao >= 15) {
             printf("A Ninfa da Floresta sorri:\n");
-            printf("'Voce provou que a compaixao nao e fraqueza.'\n");
+            printf("'Voce provou que a compaixao nao eh fraqueza.'\n");
             printf("'E a maior forca que existe.'\n");
         } else {
             printf("A Ninfa da Floresta suspira:\n");
@@ -1995,8 +1995,8 @@ void calcularRanking() {
     } else if (strcmp(rotaEscolhida, "Pantano") == 0) {
         if (pontosAstúcia >= 15) {
             printf("A Cobra do Pantano assobia:\n");
-            printf("'Voce e cacador, nao pressssa.'\n");
-            printf("'Pensssa antes de agir. Isso e ssssabedoria.'\n");
+            printf("'Voce eh cacador, nao pressssa.'\n");
+            printf("'Pensssa antes de agir. Isso eh ssssabedoria.'\n");
         } else {
             printf("A Cobra do Pantano balanca a cabeca:\n");
             printf("'Voce tropecou em muitas armadilhas.'\n");
@@ -2006,19 +2006,19 @@ void calcularRanking() {
     } else {
         if (pontosSabedoria >= 15) {
             printf("O Drake Anciao te olha com respeito:\n");
-            printf("'Voce nao e como os outros.'\n");
+            printf("'Voce nao eh como os outros.'\n");
             printf("'Voce ESCUTA. Voce APRENDE.'\n");
-            printf("'Isso e verdadeira sabedoria.'\n");
+            printf("'Isso eh verdadeira sabedoria.'\n");
         } else {
             printf("O Drake Anciao franze o rosto:\n");
             printf("'Voce tem forca... mas falta sabedoria.'\n");
-            printf("'Forcasem sabedoria e destruicao.'\n");
+            printf("'Forca sem sabedoria e destruicao.'\n");
         }
     }
     
     pausar();
     
-    // EPILOGO
+    // EPILOGO 
     printf("\n========================================\n");
     printf("              EPILOGO\n");
     printf("========================================\n\n");
@@ -2030,11 +2030,11 @@ void calcularRanking() {
     if (pontosTotal >= 30) {
         printf("A vila celebra seu retorno com uma festa.\n");
         printf("Criancas correm ate voce pedindo para ouvir suas historias.\n");
-        printf("Voce se tornou LENDA.\n\n");
+        printf("Voce se tornou uma LENDA!ll.\n\n");
     } else if (pontosTotal >= 15) {
         printf("A vila comemora discretamente.\n");
         printf("Voce fez o que era necessario.\n");
-        printf("Nao e heroi... mas fez a diferenca.\n\n");
+        printf("Nao eh um heroi... mas fez a diferenca.\n\n");
     } else {
         printf("A vila recebe voce em silencio.\n");
         printf("A missao foi cumprida... mas algo parece vazio.\n");
@@ -2050,3 +2050,4 @@ void calcularRanking() {
     pausar();
 
 }
+
